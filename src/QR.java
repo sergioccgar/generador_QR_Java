@@ -24,17 +24,28 @@ public class QR {
     private int RECUPERACION;
     /* información redundante */
     private String REDUNDANCIA;
+    /* versión del código QR */
+    private int VERSION;
+    /* Datos para las coordenadas iniciales de ciertas versiones: */
+    private int[] ALINEACION_1 = {6, 18};
+    private int[] ALINEACION_2 = {6, 22, 38};
+    private int[] ALINEACION_3 = {6, 26, 46, 66};
+    private int[] ALINEACION_4 = {6, 28, 50, 72, 94};
+    private int[] ALINEACION_5 = {6, 26, 50, 74, 98, 122};
+    private int[] ALINEACION_6 = {6, 30, 54, 78,102, 126, 150};
 
+    private int[] COORDENADAS_ALINEACION;
 
-    public QR(String texto, int tamanho){
+    public QR(String texto, int version){
         this.texto = texto;
-        this.tamanho = tamanho;
-        qr = new boolean[this.tamanho][this.tamanho];
+        tamanho = 21 + (version-1)*4;
+        qr = new boolean[tamanho][tamanho];
         binario = "";
         MASCARA = 2; //formulas con módulos de i y j
         RECUPERACION = 0; //nivel de corrección = baja
         CODIFICACION = 3; //ASCII
         TAMAÑO_MENSAJE = texto.length();
+        this.VERSION = version;
 
 
         String bin = textoABinario(texto);
@@ -103,20 +114,26 @@ public class QR {
      */
     public void construyeQR(){
         cuadrosPosicionamiento();
+        if (VERSION > 1) {
+            coordenadasCentralesAlineacion();
+            patronesAlineacion();
+        }
+        timing();
+        moduloNegro();
     }
 
     /**
      * Asigna los valores de qr[][] correspondientes a los cuadros de posicionamiento.
      */
-    public void cuadrosPosicionamiento(){
+    private void cuadrosPosicionamiento(){
         int x = 0;
         int y = 0;
         for (int k = 0; k <= 2; k++) {
             if (k == 1) {
-                y = tamanho - 8;
+                y = tamanho - 7;
             }
             if (k == 2) {
-                x = tamanho - 8;
+                x = tamanho - 7;
                 y = 0;
             }
             for (int i = 0; i <= 6; i++){
@@ -132,6 +149,119 @@ public class QR {
                 }
             }
         }
+    }
+
+    private void coordenadasCentralesAlineacion() {
+        COORDENADAS_ALINEACION = new int[(int)Math.ceil((VERSION)/7)+2]; // Tendrá tantos valores como valores de fila/columna tenga la versión.
+        if (VERSION >= 2 && VERSION <= 6) {
+            COORDENADAS_ALINEACION = ALINEACION_1;
+            COORDENADAS_ALINEACION[1] += (VERSION-2)*4;
+        } else if (VERSION >= 7 && VERSION <= 13) {
+            COORDENADAS_ALINEACION = ALINEACION_2;
+            COORDENADAS_ALINEACION[2] += (VERSION-7)*4;
+            COORDENADAS_ALINEACION[1] += (VERSION-7)*2;
+        } else if (VERSION >= 14 && VERSION <= 20) {
+            COORDENADAS_ALINEACION = ALINEACION_3;
+            COORDENADAS_ALINEACION[3] += (VERSION-14)*4;
+            if (VERSION > 14) {
+                for (int i = 1; i <= VERSION - 14; i++) {
+                    if (i % 3 == 0) {
+                        COORDENADAS_ALINEACION[2] += 4;
+                        COORDENADAS_ALINEACION[1] += 4;
+                    } else {
+                        COORDENADAS_ALINEACION[2] += 2;
+                    }
+                }
+            }
+        } else if (VERSION >= 21 && VERSION <= 27) {
+            COORDENADAS_ALINEACION = ALINEACION_4;
+            COORDENADAS_ALINEACION[4] += (VERSION - 21) * 4;
+            if (VERSION > 21) {
+                for (int i = 1; i <= VERSION - 21; i++) {
+                    if (i % 2 == 0) {
+                        COORDENADAS_ALINEACION[3] += 2;
+                        COORDENADAS_ALINEACION[1] -= 2;
+                    } else {
+                        COORDENADAS_ALINEACION[3] += 4;
+                        COORDENADAS_ALINEACION[2] += 4;
+                        COORDENADAS_ALINEACION[1] += 4;
+                    }
+                }
+            }
+        } else if (VERSION >= 28 && VERSION <= 34) {
+            COORDENADAS_ALINEACION = ALINEACION_5;
+            COORDENADAS_ALINEACION[5] += (VERSION-28)*4;
+            if (VERSION > 28) {
+                for (int i = 1; i <= VERSION - 28; i++) {
+                    if ((i+1) % 3 == 0) {
+                        COORDENADAS_ALINEACION[4] += 2;
+                        COORDENADAS_ALINEACION[2] -= 2;
+                        COORDENADAS_ALINEACION[1] -= 4;
+                    } else {
+                        COORDENADAS_ALINEACION[4] += 4;
+                        COORDENADAS_ALINEACION[3] += 4;
+                        COORDENADAS_ALINEACION[2] += 4;
+                        COORDENADAS_ALINEACION[1] += 4;
+                    }
+                }
+            }
+        }  else if (VERSION >= 35) {
+            COORDENADAS_ALINEACION = ALINEACION_6;
+            COORDENADAS_ALINEACION[6] += (VERSION-35)*4;
+            if (VERSION > 35) {
+                for (int i = 0; i < VERSION - 35; i++) {
+                    if (i % 3 == 0) {
+                        COORDENADAS_ALINEACION[5] += 2;
+                        COORDENADAS_ALINEACION[3] -= 2;
+                        COORDENADAS_ALINEACION[2] -= 4;
+                        COORDENADAS_ALINEACION[1] -= 6;
+                    } else {
+                        COORDENADAS_ALINEACION[5] += 4;
+                        COORDENADAS_ALINEACION[4] += 4;
+                        COORDENADAS_ALINEACION[3] += 4;
+                        COORDENADAS_ALINEACION[2] += 4;
+                        COORDENADAS_ALINEACION[1] += 4;
+                    }
+                }
+            }
+        }
+    }
+
+    private void patronesAlineacion() {
+        for (int value : COORDENADAS_ALINEACION) {
+            for (int i : COORDENADAS_ALINEACION) {
+                if ((value == 6 && value == i) || (value == tamanho - 7 && i == 6) || (value == 6 && i == tamanho - 7)) {
+                    continue;
+                }
+                qr[value][i] = true;
+                for (int k = 0; k <= 4; k++) {
+                    qr[(value - 2) + k][(i - 2)] = true;
+                    qr[(value - 2)][(i - 2) + k] = true;
+                    qr[(value - 2) + k][(i - 2) + 4] = true;
+                    qr[(value - 2) + 4][(i - 2) + k] = true;
+                }
+            }
+        }
+
+    }
+
+    /**
+     * Asigna los valores de qr[][] correspondientes a la zona de timing.
+     */
+    private void timing() {
+        for (int i = 8; i < qr.length-8; i++) {
+            if (i % 2 == 0) {
+                qr[6][i] = true;
+                qr[i][6] = true;
+            }
+        }
+    }
+
+    /**
+     * Asigna true al módulo con coordenadas (8, [(4 * VERSION) + 9])
+     */
+    private void moduloNegro(){
+        qr[8][(4 * VERSION) + 9]= true;
     }
 
     /** Método privado para pasar un texto a binario
@@ -234,3 +364,4 @@ public class QR {
     }
 
 }
+

@@ -19,16 +19,41 @@ Los códigos QR se utilizan en una amplia gama de industrias, incluyendo publici
 En esta práctica, haremos un programa que pueda generar códigos QR escaneables por nuestros dispositivos móviles. ¡Comenzamoooos!
 
 ### Desarrollo:
-Comenzamos con el paso 1: Crear los cuadros fijos, timing, el módulo negro y los patrones
-de alineación, que son los elementos fijos en un código QR. Como es el primer paso, crearemos
-un arreglo bidimensional tal que en las localidades correspondientes almacene 0s (cuadros blancos)
-y 1s(cuadros negros) para la representación de dichos elementos en el arreglo. Desde este momento
-consideraremos tamaños diversos de QR.
+Comenzamos con el paso 1: Crear los cuadros de posicionamiento, los separadores, los patrones de alineación, 
+el timing, el módulo negro, el área de información de versión y la cadena de formato, que son los elementos fijos en un código QR.
+Como es el primer paso, crearemos un arreglo bidimensional tal que en las localidades correspondientes
+almacene 0s (cuadros blancos) y 1s(cuadros negros) para la representación de dichos elementos en el arreglo.
+Desde este momento consideraremos tamaños diversos de QR.
+
 Para crear los cuadros de posicionamiento, hacemos una llamada a cuadrosPosicionamiento() dentro
 del cuerpo de construyeQR(); cuadrosPosicionamiento() se encargará de generar los cuadros de las esquinas
 del código QR, haciendo un loop 3 veces y rellenando los cuadros correspondientes con true. Se ignoran
 los cuadros que serían blancos, pues al inicializar la variable qr, se llena con false. Por ello, simplemente
 llenaremos los cuadros que deben llevar true.
+
+Para crear los separadores, simplemente dejamos qr[][] como está, ya que qr[][] está inicialmente lleno de
+"false", por lo que en estos elementos fijos solo nos preocuparemos por modificar los valores que deban ser
+negros (true).
+
+Para crear los patrones de alineación primero obtenemos cuántas y cuáles serán los valores para las coordenadas
+del cuadro central de cada patrón con la llamada a coordenadasCentralesAlineacion(). Hice un análisis de las series que siguen
+de los valores de la página [Alignment Pattern Locations Table](https://www.thonky.com/qr-code-tutorial/alignment-pattern-locations)
+para poder calcular los valores de cada versión en lugar de guardarlos todos como constantes.
+
+Ahora, simplemente queda tomar dichos valores y dibujar los patrones de alineación en el código QR, sin
+que queden encima de los cuadros de posicionamiento ni los separadores. Hacemos una llamada al método patronesAlineacion(),
+que asignará los valores correspondientes a los patrones en la matriz. Habrá (n*n)-m patrones de alineación, con
+n el número de valores de COORDENADAS_ALINEACION y m los patrones que, de colocarse, quedarían encima
+de los cuadros de posicionamiento (se restan del número total porque hay que omitirlos); me di cuenta, al estar haciendo
+esto, que son sólo 3 patrones de alineación los que se omiten. Esto se logra con un for.
+
+Para crear el timing, hacemos una llamada a timing() dentro del cuerpo de construyeQR(); timing() se encargará
+de obtener las coordenadas donde comienza a escribirse el timing y posteriormente asignará los valores
+correspondientes (true/false).
+
+Para el módulo negro, se invoca a moduloNegro(), que asignará true al módulo con coordenadas (8, [(4 * V) + 9]), donde
+V es la versión.
+
 
 ### Conclusiones:
 # Preguntas:
