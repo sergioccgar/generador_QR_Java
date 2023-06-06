@@ -1,3 +1,4 @@
+import java.lang.annotation.Target;
 
 /**
  * Clase que dado una cadena, crea su respectivo código QR para ser escaneado con 
@@ -12,16 +13,16 @@ public class QR {
     /* La matriz de código qr. */
     private boolean[][] qr;
     /* Tamaño de la matriz */
-    private int tamanho;
+    private int TAMANHO;
 
     /* Tipo máscara [0-7]*/
-    private int MASCARA;
+    private String MASCARA;
     /* Tipo Codificación [0-8]*/
     private int CODIFICACION;
     /* Tamaño mensaje */
     private int TAMAÑO_MENSAJE;
     /* Recuperación de error [0-3]*/
-    private int RECUPERACION;
+    private String RECUPERACION;
     /* información redundante */
     private String REDUNDANCIA;
     /* versión del código QR */
@@ -36,13 +37,15 @@ public class QR {
 
     private int[] COORDENADAS_ALINEACION;
 
-    public QR(String texto, int version){
+    private String CADENA_FORMATO;
+
+    public QR(String texto, int version, int recuperacion, int mascara){
         this.texto = texto;
-        tamanho = 21 + (version-1)*4;
-        qr = new boolean[tamanho][tamanho];
+        TAMANHO = 21 + (version-1)*4;
+        qr = new boolean[TAMANHO][TAMANHO];
         binario = "";
-        MASCARA = 2; //formulas con módulos de i y j
-        RECUPERACION = 0; //nivel de corrección = baja
+        MASCARA = String.format("%" + 3 + "s", Integer.toBinaryString(mascara)).replace(' ', '0');
+        RECUPERACION = String.format("%" + 2 + "s", Integer.toBinaryString(recuperacion)).replace(' ', '0');
         CODIFICACION = 3; //ASCII
         TAMAÑO_MENSAJE = texto.length();
         this.VERSION = version;
@@ -50,7 +53,9 @@ public class QR {
 
         String bin = textoABinario(texto);
         construyeQR();
-        System.out.println(toString());
+        //System.out.println(toString());
+        //System.out.println(RECUPERACION);
+        //System.out.println(MASCARA);
     }
 
     /** Genera una representación en cadena del código QR.
@@ -61,8 +66,6 @@ public class QR {
         String s = "";
         for (int i = 0; i < qr.length; i++){
             for (int j = 0; j < qr.length; j++){
-                //Se usa la afirmación (1) como negro para una mejor visualizacion en la consola.
-                //Pero debería ser al revés. Si es (1) el pixel debe ser blanco.
                 if (qr[j][i])
                     s += "██";
                 else
@@ -120,6 +123,10 @@ public class QR {
         }
         timing();
         moduloNegro();
+        infFormato();
+        if (VERSION >= 7) {
+            versInf();
+        }
     }
 
     /**
@@ -130,10 +137,10 @@ public class QR {
         int y = 0;
         for (int k = 0; k <= 2; k++) {
             if (k == 1) {
-                y = tamanho - 7;
+                y = TAMANHO - 7;
             }
             if (k == 2) {
-                x = tamanho - 7;
+                x = TAMANHO - 7;
                 y = 0;
             }
             for (int i = 0; i <= 6; i++){
@@ -230,7 +237,7 @@ public class QR {
     private void patronesAlineacion() {
         for (int value : COORDENADAS_ALINEACION) {
             for (int i : COORDENADAS_ALINEACION) {
-                if ((value == 6 && value == i) || (value == tamanho - 7 && i == 6) || (value == 6 && i == tamanho - 7)) {
+                if ((value == 6 && value == i) || (value == TAMANHO - 7 && i == 6) || (value == 6 && i == TAMANHO - 7)) {
                     continue;
                 }
                 qr[value][i] = true;
@@ -262,6 +269,167 @@ public class QR {
      */
     private void moduloNegro(){
         qr[8][(4 * VERSION) + 9]= true;
+    }
+
+    /**
+     * Encuentra la cadena correspondiente a la cadena de formato del código QR y asigna los valores de qr de acuerdo
+     * a esta cadena encontrada.
+     */
+    private void infFormato() {
+        String correccion_mascara = RECUPERACION + MASCARA;
+        //System.out.println(correccion_mascara);
+        String polinomio_generador = "10100110111";
+        correccion_mascara = String.format("%-" + 15 + "s", correccion_mascara).replace(' ', '0');
+        //System.out.println(correccion_mascara);
+        correccion_mascara = correccion_mascara.replaceFirst("^0+(?!$)", "");
+        //System.out.println(correccion_mascara);
+        String xor_final = "101010000010010";
+        String temp = "";
+        while (correccion_mascara.length() > 10) {
+            polinomio_generador = String.format("%-" + correccion_mascara.length() + "s", polinomio_generador).replace(' ', '0');
+            //System.out.println(polinomio_generador);
+            for (int i = 0; i < correccion_mascara.length(); i++) {
+                if (polinomio_generador.charAt(i) == correccion_mascara.charAt(i)) {
+                    temp += "0";
+                } else {
+                    temp += "1";
+                }
+            }
+            correccion_mascara = temp;
+            //System.out.println("hmn: " + correccion_mascara);
+            temp = "";
+            correccion_mascara = correccion_mascara.replaceFirst("^0+(?!$)", "");
+            //System.out.println("no zeroes left: " + correccion_mascara);
+        }
+        if (correccion_mascara.length() < 10) {
+            correccion_mascara = String.format("%" + 10 + "s", correccion_mascara).replace(' ', '0');
+        }
+
+        //System.out.println("padded: " + correccion_mascara);
+
+        correccion_mascara = RECUPERACION + MASCARA + correccion_mascara;
+
+        //System.out.println("with rec and masc: " + correccion_mascara);
+
+        for (int i = 0; i < correccion_mascara.length(); i++) {
+            if (xor_final.charAt(i) == correccion_mascara.charAt(i)) {
+                temp += "0";
+            } else {
+                temp += "1";
+            }
+        }
+
+        correccion_mascara = temp;
+
+        CADENA_FORMATO = correccion_mascara;
+        //System.out.println(CADENA_FORMATO);
+        int k = 8;
+        for (int i = 0; i < 7; i++) {
+            if (String.valueOf(CADENA_FORMATO.charAt(i)).equals("1")){
+                if (i <= 5) {
+                    qr[i][8] = true;
+                } else {
+                    qr[i + 1][8] = true;
+                }
+            }
+        }
+        for (int i = 7; i < 15; i++) {
+            if (String.valueOf(CADENA_FORMATO.charAt(i)).equals("1")){
+                qr[8][k] = true;
+            }
+            if (k == 7) {
+                k -= 2;
+            } else {
+                k -= 1;
+            }
+        }
+        for (int i = 0; i < 7; i++) {
+            if (String.valueOf(CADENA_FORMATO.charAt(i)).equals("1")){
+                qr[8][TAMANHO-1-i] = true;
+            }
+        }
+        k = 8;
+        for (int i = 7; i < 15; i++) {
+            if (String.valueOf(CADENA_FORMATO.charAt(i)).equals("1")){
+                qr[TAMANHO-k][8] = true;
+            }
+            k -= 1;
+        }
+    }
+
+    /**
+     * Método que obtiene la versión de la información del código QR para después colocarlo en los módulos
+     * correspondientes.
+     */
+    private void versInf() {
+        String polinomio_generador = "1111100100101";
+        //System.out.println("Polinomio generador: " + polinomio_generador);
+        String bin_version = String.format("%" + 6 + "s", Integer.toBinaryString(VERSION)).replace(' ', '0');
+        String binary_version = String.format("%" + 6 + "s", Integer.toBinaryString(VERSION)).replace(' ', '0');
+        //System.out.println("Version binaria: " + binary_version);
+        binary_version = String.format("%-" + 18 + "s", binary_version).replace(' ', '0');
+        //System.out.println("Version binaria longitud 18: " + binary_version);
+        binary_version = binary_version.replaceFirst("^0+(?!$)", "");
+        //System.out.println("Version binaria sin ceros izquierdos: " + binary_version);
+        //System.out.println("Longitud de la version binaria sin ceros izquierdos: " + binary_version.length());
+        polinomio_generador = String.format("%-" + binary_version.length() + "s", polinomio_generador).replace(' ', '0');
+        //System.out.println("Polinomio generador de longitud igual que version binaria sin ceros izquierdos: " + polinomio_generador);
+        //System.out.println(binary_version.length());
+        //System.out.println(polinomio_generador.length());
+        String temp = "";
+        while (binary_version.length() > 12) {
+            polinomio_generador = String.format("%-" + binary_version.length() + "s", polinomio_generador).replace(' ', '0');
+            //System.out.println("Polinomio generador: " + polinomio_generador);
+            for (int i = 0; i < binary_version.length(); i++) {
+                if (polinomio_generador.charAt(i) == binary_version.charAt(i)) {
+                    temp += "0";
+                } else {
+                    temp += "1";
+                }
+            }
+            binary_version = temp;
+            //System.out.println("xor: " + binary_version);
+            temp = "";
+            binary_version = binary_version.replaceFirst("^0+(?!$)", "");
+          //  System.out.println("no zeroes left: " + binary_version);
+        }
+        if (binary_version.length() < 12) {
+            binary_version = String.format("%" + 12 + "s", binary_version).replace(' ', '0');
+        }
+
+        //System.out.println("final: " + binary_version);
+
+        binary_version = bin_version + binary_version;
+        //System.out.println(binary_version.length());
+
+        int k = 0;
+        int j = 0;
+        for (int i = 0; i < 18; i++) {
+            if (i != 0 && i % 3 == 0) {
+                j -= 3;
+                k += 1;
+            }
+            if (String.valueOf(binary_version.charAt(i)).equals("1")) {
+                qr[5-k][TAMANHO-9-j] = true;
+            }
+            j += 1;
+        }
+
+        j = 0;
+        k = 0;
+        for (int i = 0; i < 18; i++) {
+            if (i != 0 && i % 3 == 0) {
+                j -= 3;
+                k += 1;
+            }
+            if (String.valueOf(binary_version.charAt(i)).equals("1")) {
+                qr[TAMANHO-9-j][5-k] = true;
+            }
+            j += 1;
+        }
+
+
+        //System.out.println("listo: " + binary_version);
     }
 
     /** Método privado para pasar un texto a binario

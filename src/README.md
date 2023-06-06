@@ -54,6 +54,14 @@ correspondientes (true/false).
 Para el módulo negro, se invoca a moduloNegro(), que asignará true al módulo con coordenadas (8, [(4 * V) + 9]), donde
 V es la versión.
 
+Ahora colocamos la información de formato, que son 15 bits que se obtienen a partir del valor en binario del
+nivel de corrección y del valor en binario de la máscara. Invocamos al método infFormato(). Esto se obtuvo siguiendo
+los pasos en [Format and Version Information](https://www.thonky.com/qr-code-tutorial/format-version-information).
+
+Finalmente, colocamos la información de versión. Para códigos QR versión 7 o mayor, se requiere que
+en un bloque de 6x3 módulos, encima del cuadro de posicionamiento inferior izquierdo y a la izquierda del
+superior derecho. Invocamos al método verInf().
+
 
 ### Conclusiones:
 # Preguntas:
