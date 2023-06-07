@@ -60,7 +60,20 @@ los pasos en [Format and Version Information](https://www.thonky.com/qr-code-tut
 
 Finalmente, colocamos la información de versión. Para códigos QR versión 7 o mayor, se requiere que
 en un bloque de 6x3 módulos, encima del cuadro de posicionamiento inferior izquierdo y a la izquierda del
-superior derecho. Invocamos al método verInf().
+superior derecho. Invocamos al método versInf().
+
+Ahora sí viene lo bueno: codificar el mensaje para colocarlo en el código QR. Seguiremos los pasos
+de la página [Data Encoding](https://www.thonky.com/qr-code-tutorial/data-encoding#step-4-add-the-character-count-indicator).
+Primero elegiremos el nivel de corrección, esto ya está hecho en los parámetros del constructor de un QR.
+Ahora, determinaremos la versión más pequeña posible para la información que queremos almacenar el el código
+QR. Por ahora solamente trabajaremos con caracteres en Byte Mode. Como de por si la práctica ya la estaré entregando
+tarde, no buscaré patrones para calcular una fórmula para obtener el máximo número de bytes que se pueden almacenar
+en un código QR versión X con nivel de corrección Y, por lo que crearé más bien una constante que tenga
+almacenados dichos datos para que dada una cadena y un nivel de corrección la clase elija la versión del código QR
+necesaria para que sea de tamaño mínimo posible para almacenar los caracteres de la cadena. Esto implicará que
+el constructor de la clase QR ya no recibirá como parámetro la versión en la que se desea almacenar la información.
+Ahora sólo recibirá la cadena por almacenar, el nivel de corrección de error y la máscara.
+
 
 
 ### Conclusiones:

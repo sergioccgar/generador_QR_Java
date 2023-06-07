@@ -34,21 +34,44 @@ public class QR {
     private int[] ALINEACION_4 = {6, 28, 50, 72, 94};
     private int[] ALINEACION_5 = {6, 26, 50, 74, 98, 122};
     private int[] ALINEACION_6 = {6, 30, 54, 78,102, 126, 150};
-
+    /* Lista que almacenará, como las listas ALINEACION_X, los datos de las coordenadas que se usarán en los patrones de alineación*/
     private int[] COORDENADAS_ALINEACION;
-
+    /* Cadena que almacenará la información de nivel de corrección y máscara. */
     private String CADENA_FORMATO;
+    /* Listas que almacenan el máximo número de caracteres en Byte Mode que una versión n puede almacenar con un nivel de corrección X */
+    /* El elemento con índice x indica el máximo número de caracteres que puede almacenar la versión x+1 con el nivel de corrección indicado por la lista */
+    private int[] BM_Max_L = {17, 32, 53, 78, 106, 134, 154, 192, 230, 271, 321, 367, 425, 458, 520, 586, 644, 718, 792, 858, 929, 1003, 1091, 1171, 1273, 1367, 1465, 1528, 1628, 1732, 1840, 1952, 2068, 2188, 2303, 2431, 2563, 2699, 2809, 2953};
+    private int[] BM_Max_M = {14, 26, 42, 62, 84, 106, 122, 152, 180, 213, 251, 287, 331, 362, 412, 450, 504, 560, 624, 666, 711, 779, 857, 911, 997, 1059, 1125, 1190, 1264, 1370, 1452, 1538, 1628, 1722, 1809, 1911, 1989, 2099, 2213, 2331};
+    private int[] BM_Max_Q = {11, 20, 32, 46, 60, 74, 86, 108, 130, 151, 177, 203, 241, 258, 292, 311, 364, 394, 442, 482, 509, 565, 611, 661, 715, 751, 805, 868, 908, 982, 1030, 1112, 1168, 1228, 1283, 1351, 1423, 1499, 1579, 1663};
+    private int[] BM_Max_H = {7, 14, 24, 34, 44, 58, 64, 84, 98, 119, 137, 155, 177, 194, 220, 250, 280, 310, 338, 382, 403, 439, 461, 511, 535, 593, 625, 658, 698, 742, 790, 842, 898, 958, 983, 1051, 1093, 1139, 1219, 1273};
+    /* Variable de prueba */
+    private int recuprueba;
 
-    public QR(String texto, int version, int recuperacion, int mascara){
+    public QR(String texto, int recuperacion, int mascara){
         this.texto = texto;
-        TAMANHO = 21 + (version-1)*4;
-        qr = new boolean[TAMANHO][TAMANHO];
         binario = "";
         MASCARA = String.format("%" + 3 + "s", Integer.toBinaryString(mascara)).replace(' ', '0');
         RECUPERACION = String.format("%" + 2 + "s", Integer.toBinaryString(recuperacion)).replace(' ', '0');
+        recuprueba = recuperacion;
         CODIFICACION = 3; //ASCII
         TAMAÑO_MENSAJE = texto.length();
-        this.VERSION = version;
+        switch (recuperacion) {
+            case 1: //L
+                buscarNumero(texto.length(), BM_Max_L);
+                break;
+            case 0: //M
+                buscarNumero(texto.length(), BM_Max_M);
+                break;
+            case 3: //Q
+                buscarNumero(texto.length(), BM_Max_Q);
+                break;
+            case 2: //H
+                buscarNumero(texto.length(), BM_Max_H);
+                break;
+        }
+        TAMANHO = 21 + (VERSION-1)*4;
+        qr = new boolean[TAMANHO][TAMANHO];
+        //System.out.println("Version: " + VERSION);
 
 
         String bin = textoABinario(texto);
@@ -56,6 +79,61 @@ public class QR {
         //System.out.println(toString());
         //System.out.println(RECUPERACION);
         //System.out.println(MASCARA);
+    }
+    /**
+     *
+     */
+    public boolean prueba(){
+        switch (recuprueba) {
+            case 1: //L
+                return (texto.length() <= BM_Max_L[VERSION-1]);
+            case 0: //M
+                return (texto.length() <= BM_Max_M[VERSION-1]);
+            case 3: //Q
+                return (texto.length() <= BM_Max_Q[VERSION-1]);
+            case 2: //H
+                return (texto.length() <= BM_Max_H[VERSION-1]);
+            default:
+                System.out.println("???");
+                return false;
+        }
+    }
+
+
+    /**
+     * Método que dado un número x (longitud del mensaje), busca en la lista de caracteres máximos para un nivel de corrección
+     * el número más pequeño de la lista que sea mayor a x, la versión de código QR por utilizar será V = i+1, donde i es el índice
+     * del elemento encontrado.
+     * @param value
+     */
+    private void buscarNumero(int value, int[] a) {
+        if(value < a[0]) {
+            VERSION = 1;
+            return;
+        }
+        if(value > a[a.length-1]) {
+            VERSION = 40;
+            return;
+        }
+
+        int lo = 0;
+        int hi = a.length - 1;
+
+        while (lo <= hi) {
+            int mid = (hi + lo) / 2;
+
+            if (value < a[mid]) {
+                hi = mid - 1;
+            } else if (value > a[mid]) {
+                lo = mid + 1;
+            } else {
+                VERSION = mid + 1;
+                return;
+            }
+        }
+        // lo == hi + 1
+        VERSION = lo + 1;
+        //System.out.println(VERSION);
     }
 
     /** Genera una representación en cadena del código QR.
@@ -158,6 +236,9 @@ public class QR {
         }
     }
 
+    /**
+     * Método que obtiene las coordenadas que se usarán para los patrones de alineación.
+     */
     private void coordenadasCentralesAlineacion() {
         COORDENADAS_ALINEACION = new int[(int)Math.ceil((VERSION)/7)+2]; // Tendrá tantos valores como valores de fila/columna tenga la versión.
         if (VERSION >= 2 && VERSION <= 6) {
@@ -416,7 +497,7 @@ public class QR {
         }
 
         j = 0;
-        k = 0;
+        k   = 0;
         for (int i = 0; i < 18; i++) {
             if (i != 0 && i % 3 == 0) {
                 j -= 3;
@@ -427,9 +508,6 @@ public class QR {
             }
             j += 1;
         }
-
-
-        //System.out.println("listo: " + binary_version);
     }
 
     /** Método privado para pasar un texto a binario
@@ -532,4 +610,5 @@ public class QR {
     }
 
 }
+
 

@@ -10,8 +10,27 @@ public class Main {
 
     public static void main(String[] args) {
 
-        QR qr = new QR("TeoriaDeCodigos", 7, 1,4);
-        System.out.println(qr);
+        String prueba = "a";
+        for (int i = 1; i <= 2953; i++) {
+            QR qr = new QR(prueba, 1,4);
+            if (! qr.prueba()) {
+                System.out.println("Error en el caso: " + i);
+                break;
+            }
+            prueba += "a";
+        }
+
+        prueba = "a";
+        for (int i = 1; i <= 2331; i++) {
+            QR qr = new QR(prueba, 0,4);
+            if (! qr.prueba()) {
+                System.out.println("Error en el caso: " + i);
+                break;
+            }
+            prueba += "a";
+            //System.out.println(prueba.length());
+        }
+        //System.out.println(qr);
 
         /*for (int i = 2; i <= 40; i++) {
             System.out.println((int)Math.ceil((i)/7)+2);
