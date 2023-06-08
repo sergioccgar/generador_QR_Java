@@ -14,6 +14,14 @@ public class QR {
     private boolean[][] qr;
     /* Tamaño de la matriz */
     private int TAMANHO;
+    /* Índice de la cadena hasta donde ya se han insertado los datos en el QR */
+    private int indice;
+    /* Cadena que se insertará en el QR */
+    private String bits_insertar;
+    /* Valor de la columna que corresponde al lugar del qr que se modificará */
+    private int columna;
+    /* Valor de la fila que corresponde al lugar del qr que se modificará */
+    private int fila;
 
     /* Tipo máscara [0-7]*/
     private String MASCARA;
@@ -145,14 +153,16 @@ public class QR {
     /* Bloques necesarios de corrección */
     private int ERR_BLOCKS;
 
+    /* Bloques de información necesarios según la versión y nivel de corrección */
+    private String[] data_blocks;
+
     public QR(String texto, int recuperacion, int mascara){
         this.texto = texto;
         binario = "";
         MASCARA = String.format("%" + 3 + "s", Integer.toBinaryString(mascara)).replace(' ', '0');
         RECUPERACION = String.format("%" + 2 + "s", Integer.toBinaryString(recuperacion)).replace(' ', '0');
         RECUPERACION_DEC = recuperacion;
-        CODIFICACION = String.format("%" + 4 + "s", Integer.toBinaryString(2)).replace(' ', '0'); //cambiar a 4, byte mode
-        System.out.println(CODIFICACION);
+        CODIFICACION = String.format("%" + 4 + "s", Integer.toBinaryString(4)).replace(' ', '0'); //cambiar a 4, byte mode
         TAMAÑO_MENSAJE = texto.length();
         textoABinario();
         switch (recuperacion) {
@@ -218,6 +228,11 @@ public class QR {
             bits += pad_bits[i];
             i = (i+1) % 2;
         }
+        /* Esta parte considera trabajar con un QR v3 Q. Necesitaremos 2 bloques de datawords*/
+        data_blocks = new String[2];
+        data_blocks[0] = bits.substring(0, 136);
+        data_blocks[1] = bits.substring(136);
+        /* Fin */
         construyeQR();
     }
 
@@ -363,9 +378,359 @@ public class QR {
         }
         ERR_BLOCKS = ERR_BLOCKS_LIST[((VERSION-1)*4)+(RECUPERACION_DEC+(int)Math.pow(-1, RECUPERACION_DEC+2))];
         //System.out.println(bits);
-        ReedSolomonEC rs = new ReedSolomonEC(bits, nivel, VERSION, ERR_BLOCKS);
+        /*ReedSolomonEC rs = new ReedSolomonEC(bits, nivel, VERSION, ERR_BLOCKS);
         Polinomio resultado = rs.getResultado();
-        System.out.println(resultado);
+        System.out.println(resultado);*/
+        /* v3 - Q */
+        ReedSolomonEC rs1 = new ReedSolomonEC(data_blocks[0], nivel, VERSION, ERR_BLOCKS);
+        ReedSolomonEC rs2 = new ReedSolomonEC(data_blocks[1], nivel, VERSION, ERR_BLOCKS);
+        Polinomio resultado1 = rs1.getResultado();
+        Polinomio resultado2 = rs2.getResultado();
+        int[] ec_cw_block_1 = new int[resultado1.getLista().size()];
+        for (int i = 0; i < ec_cw_block_1.length; i++) {
+            int index = resultado1.getLista().get(i).toString().indexOf("x");
+            ec_cw_block_1[i] = Integer.parseInt(resultado1.getLista().get(i).toString().substring(0, index));
+        }
+        int[] ec_cw_block_2 = new int[resultado2.getLista().size()];
+        for (int i = 0; i < ec_cw_block_2.length; i++) {
+            int index = resultado2.getLista().get(i).toString().indexOf("x");
+            ec_cw_block_2[i] = Integer.parseInt(resultado2.getLista().get(i).toString().substring(0, index));
+        }
+        // System.out.println(data_blocks[0].length()/8);
+        int[] data_cw_block_1 = dataCodewords(data_blocks[0]);
+        int[] data_cw_block_2 = dataCodewords(data_blocks[1]);
+        /*int[] data_cw_block_2 = new int[18];
+        for (int i = 0; i < 18; i++) {
+            data_cw_block_2[i] = i;
+        }*/
+        int[] interleaved_data = new int[data_cw_block_1.length + data_cw_block_2.length];
+        for (int i = 0; i < interleaved_data.length; i++) {
+            if (i % 2 == 0) {
+                interleaved_data[i] = data_cw_block_1[i/2];
+            } else {
+                interleaved_data[i] = data_cw_block_2[i/2];
+            }
+        }
+        /*System.out.print("[");
+        for (int x : data_cw_block_1) {
+            System.out.print(x + ", ");
+        }
+        System.out.println("]");
+        System.out.print("[");
+        for (int x : data_cw_block_2) {
+            System.out.print(x + ", ");
+        }
+        System.out.println("]");
+        System.out.print("[");
+        for (int x : interleaved_data) {
+            System.out.print(x + ", ");
+        }
+        System.out.println("]");*/
+
+        int[] interleaved_ECw = new int[ec_cw_block_1.length + ec_cw_block_2.length];
+        //System.out.println(interleaved_ECw.length);
+        for (int i = 0; i < interleaved_ECw.length; i++) {
+            if (i % 2 == 0) {
+                interleaved_ECw[i] = ec_cw_block_1[i/2];
+            } else {
+                interleaved_ECw[i] = ec_cw_block_2[i/2];
+            }
+        }
+        /*System.out.print("[");
+        for (int x : ec_cw_block_1) {
+            System.out.print(x + ", ");
+        }
+        System.out.println("]");
+        System.out.print("[");
+        for (int x : ec_cw_block_2) {
+            System.out.print(x + ", ");
+        }
+        System.out.println("]");
+        System.out.print("[");
+        for (int x : interleaved_ECw) {
+            System.out.print(x + ", ");
+        }
+        System.out.println("]");*/
+
+        int interleaved_cw_list_length = interleaved_data.length + interleaved_ECw.length;
+        int[] interleaved_cw = new int[interleaved_cw_list_length];
+        for (int i = 0; i < interleaved_cw.length; i++) {
+            if (i < interleaved_data.length) {
+                interleaved_cw[i] = interleaved_data[i];
+            } else {
+                interleaved_cw[i] = interleaved_ECw[i-interleaved_data.length];
+            }
+        }
+        /*System.out.print("[");
+        for (int x : interleaved_cw) {
+            System.out.print(x + ", ");
+        }
+        System.out.println("]");*/
+
+        String[] interleaved_cw_bin = new String[interleaved_cw.length];
+
+        for (int i = 0; i < interleaved_cw.length; i++) {
+            interleaved_cw_bin[i] = String.format("%" + 8 + "s", Integer.toBinaryString(interleaved_cw[i])).replace(' ', '0');
+        }
+
+        System.out.print("[");
+        for (String x : interleaved_cw_bin) {
+            System.out.print(x + ", ");
+        }
+        System.out.println("]");
+
+        String final_bits = "";
+
+        for (String s : interleaved_cw_bin) {
+            final_bits += s;
+        }
+
+        final_bits += "0000000";
+        bits_insertar = final_bits;
+        insertar_datos();
+
+        /*// Primer columna de bloques
+        for (int i = TAMANHO - 1; i > 8; i--) {
+            if (final_bits.charAt(bits_index) == '1') {
+                //System.out.println("yes1");
+                qr[TAMANHO-1][i] = true;
+            }
+            bits_index += 1;
+            //System.out.println(this);
+            if (final_bits.charAt(bits_index) == '1') {
+                //System.out.println("yes2");
+                qr[TAMANHO-2][i] = true;
+            }
+            bits_index += 1;
+            //System.out.println(this);
+        }
+        // Segunda columna  de bloques
+        for (int i = 9; i < TAMANHO - 1; i++) {
+            if (final_bits.charAt(bits_index) == '1') {
+                //System.out.println("yes1");
+                qr[TAMANHO-3][i] = true;
+            }
+            bits_index += 1;
+            //System.out.println(this);
+            if (final_bits.charAt(bits_index) == '1') {
+                //System.out.println("yes2");
+                qr[TAMANHO-4][i] = true;
+            }
+            bits_index += 1;
+            //System.out.println(this);
+        }
+        // Tercer columna de bloques
+        for (int i = 9; i > TAMANHO - 1; i++) {
+            if ((TAMANHO-5 >= 20 && TAMANHO-5 <= 24) && (i >= 20 && i <= 24)) {
+                System.out.println("[" + (TAMANHO-5) + ", " + i + "]");
+                continue;
+            }
+            if ((TAMANHO-6 >= 20 && TAMANHO-6 <= 24) && (i >= 20 && i <= 24)) {
+                System.out.println("[" + (TAMANHO-6) + ", " + i + "]");
+                continue;
+            }
+            if (final_bits.charAt(bits_index) == '1') {
+                //System.out.println("yes1");
+                qr[TAMANHO-5][i] = true;
+            }
+            bits_index += 1;
+            //System.out.println(this);
+            if (final_bits.charAt(bits_index) == '1') {
+                //System.out.println("yes2");
+                qr[TAMANHO-6][i] = true;
+            }
+            bits_index += 1;
+            //System.out.println(this);
+        }
+        // Cuarta columna de bloques
+        for (int i = TAMANHO - 1; i > 8; i--) {
+            if ((TAMANHO-7 >= 20 && TAMANHO-7 <= 24) && (i >= 20 && i <= 24)) {
+                System.out.println("[" + (TAMANHO-7) + ", " + i + "]");
+                continue;
+            }
+            if ((TAMANHO-8 >= 20 && TAMANHO-8 <= 24) && (i >= 20 && i <= 24)) {
+                System.out.println("[" + (TAMANHO-8) + ", " + i + "]");
+                continue;
+            }
+            if (final_bits.charAt(bits_index) == '1') {
+                //System.out.println("yes1");
+                qr[TAMANHO-7][i] = true;
+            }
+            bits_index += 1;
+            //System.out.println(this);
+            if (final_bits.charAt(bits_index) == '1') {
+                //System.out.println("yes2");
+                qr[TAMANHO-8][i] = true;
+            }
+            bits_index += 1;
+            //System.out.println(this);
+        }
+        for (int i = 9; i > TAMANHO - 1; i++) {
+            if ((TAMANHO-5 >= 20 && TAMANHO-5 <= 24) && (i >= 20 && i <= 24)) {
+
+            } else {
+
+            }
+            if ((TAMANHO-6 >= 20 && TAMANHO-6 <= 24) && (i >= 20 && i <= 24)) {
+                System.out.println("[" + (TAMANHO-6) + ", " + i + "]");
+                continue;
+            }
+            if (final_bits.charAt(bits_index) == '1') {
+                //System.out.println("yes1");
+                qr[TAMANHO-5][i] = true;
+            }
+            bits_index += 1;
+            //System.out.println(this);
+            if (final_bits.charAt(bits_index) == '1') {
+                //System.out.println("yes2");
+                qr[TAMANHO-6][i] = true;
+            }
+            bits_index += 1;
+            //System.out.println(this);
+        }*/
+
+
+        /*System.out.println(data_cw_block_1.length);
+        System.out.println(data_cw_block_2.length);
+        System.out.println(ec_cw_block_1.length);
+        System.out.println(ec_cw_block_2.length);
+        System.out.print("[");
+        for (int x : data_cw_block_1) {
+            System.out.print(x + ", ");
+        }
+        System.out.println("]");
+        System.out.print("[");
+        for (int x : ec_cw_block_1) {
+            System.out.print(x + ", ");
+        }
+        System.out.println("]");
+        System.out.print("[");
+        for (int x : data_cw_block_2) {
+            System.out.print(x + ", ");
+        }
+        System.out.println("]");
+        System.out.print("[");
+        for (int x : ec_cw_block_2) {
+            System.out.print(x + ", ");
+        }
+        System.out.println("]");*/
+        /*System.out.println(data_blocks[0]);
+        System.out.println(data_blocks[1]);
+        System.out.print("[");
+        for (int x : data_cw_block_1) {
+            System.out.print(x + ", ");
+        }
+        System.out.println("]");
+        System.out.print("[");
+        for (int i = 0; i < data_blocks[0].length(); i+=8){
+            //System.out.println(mensaje.substring(i, Math.min(i + 8, mensaje.length())));
+            int ascii = Integer.parseInt(data_blocks[0].substring(i, Math.min(i + 8, data_blocks[0].length())),2);
+            System.out.print(ascii + ", ");
+        }
+        System.out.println("]");
+        System.out.print("[");
+        for (int x : data_cw_block_2) {
+            System.out.print(x + ", ");
+        }
+        System.out.println("]");
+        System.out.print("[");
+        for (int i = 0; i < data_blocks[1].length(); i+=8){
+            //System.out.println(mensaje.substring(i, Math.min(i + 8, mensaje.length())));
+            int ascii = Integer.parseInt(data_blocks[1].substring(i, Math.min(i + 8, data_blocks[1].length())),2);
+            System.out.print(ascii + ", ");
+        }
+        System.out.println("]");*/
+        /* */
+    }
+
+    /**
+     * Método que inserta los bits en los módulos vacíos del qr.
+     */
+    private void insertar_datos() {
+        indice = 0;
+        columna = TAMANHO - 1;
+        fila = TAMANHO - 1;
+        while (indice < bits_insertar.length()) {
+            if (columna == -1) {
+                return;
+            }
+            llenarArriba();
+            columna -= 2;
+            llenarAbajo();
+            columna -= 2;
+        }
+    }
+
+    private void llenarArriba() {
+        while (fila > 0) {
+            if (moduloLibre(columna, fila)) {
+                if (bits_insertar.charAt(indice) == '1') {
+                    qr[columna][fila] = true;
+                }
+                indice += 1;
+            }
+            columna -= 1;
+            if (moduloLibre(columna, fila)) {
+                if (bits_insertar.charAt(indice) == '1') {
+                    qr[columna][fila] = true;
+                }
+                indice += 1;
+            }
+            columna += 1;
+            fila -= 1;
+        }
+        if (columna == 8 && fila == 0) {
+            columna = 7;
+        }
+    }
+
+    private void llenarAbajo() {
+        while (fila < TAMANHO) {
+            if (moduloLibre(columna, fila)) {
+                if (bits_insertar.charAt(indice) == '1') {
+                    qr[columna][fila] = true;
+                }
+                indice += 1;
+            }
+            columna -= 1;
+            if (moduloLibre(columna, fila)) {
+                if (bits_insertar.charAt(indice) == '1') {
+                    qr[columna][fila] = true;
+                }
+                indice += 1;
+            }
+            columna += 1;
+            fila += 1;
+        }
+        fila -= 1;
+    }
+
+    /**
+     * Método que devuelve si el módulo en el que se pretende escribir información está libre
+     * @param col
+     * @param fil
+     * @return
+     */
+    private boolean moduloLibre(int col, int fil) {
+        boolean libre = true;
+        if (VERSION >= 7 && invadeInfVers(col, fil)) {
+            libre = false;
+        }
+        if (invadeTimingHorizontal(col, fil) || invadeCuadroPosicionamiento(col, fil) || invadePatronAlineacion(col, fil)) {
+            libre = false;
+        }
+        return libre;
+    }
+    /**
+     * Método que obtiene una lista con las data codewords de cada bloque de data codewords para entonces llenar el código QR.
+     */
+    private int[] dataCodewords(String block) {
+        int[] data_codewords = new int[block.length()/8];
+        for (int i = 0; i < block.length(); i+=8){
+            int codeword = Integer.parseInt(block.substring(i, Math.min(i + 8, block.length())),2);
+            data_codewords[i/8] = codeword;
+        }
+        return data_codewords;
     }
 
     /**
@@ -491,7 +856,73 @@ public class QR {
                 }
             }
         }
+    }
 
+    /**
+     * Método que nos indica si estamos invadiendo un módulo reservado al querer almacenar información en él.
+     * @param col
+     * @param fil
+     * @return
+     */
+    private boolean invadeCuadroPosicionamiento(int col, int fil) {
+        boolean invade = false;
+        if (col >= 0 && col <= 8 && fil >= 0 && fil <= 8) { // Las coordenadas invaden el cuadro de posicionamiento superior izquierdo, y sus separadores
+            invade = true;
+        } else if (col >= TAMANHO - 8 && col <= TAMANHO - 1 && fil >= 0 && fil <= 8) { // Las coordenadas invaden el cuadro de posicionamiento superior derecho, y sus separadores
+            invade = true;
+        } else if (col >= 0 && col <= 8 && fil >= TAMANHO - 8 && fil <= TAMANHO - 1) { // Las coordenadas invaden el cuadro de posicionamiento inferior izquierdo, sus separadores, y el módulo negro.
+            invade = true;
+        }
+        return invade;
+    }
+
+    /**
+     * Método que nos indica si estamos invadiendo un módulo reservado al querer almacenar información en él.
+     * @param col
+     * @param fil
+     * @return
+     */
+    private boolean invadeTimingHorizontal(int col, int fil) {
+        boolean invade = false;
+        if (fil == 6) {
+            invade = true;
+        }
+        return invade;
+    }
+
+    private boolean invadeInfVers(int col, int fil) {
+        boolean invade = false;
+        if (col >= TAMANHO - 11 && col <= TAMANHO - 9 && fil >= 0 && fil <= 5) {
+            invade = true;
+        } else if (col >= 0 && col <= 5 && fil >= TAMANHO - 11 && fil <= TAMANHO - 9) {
+            invade = true;
+        }
+        return invade;
+    }
+
+    /**
+     * Método que nos indica si estamos invadiendo un módulo reservado al querer almacenar información en él.
+     * @param col
+     * @param fil
+     * @return
+     */
+    private boolean invadePatronAlineacion(int col, int fil) {
+        boolean invade = false;
+        for (int value : COORDENADAS_ALINEACION) {
+            for (int i : COORDENADAS_ALINEACION) {
+                if ((value == 6 && value == i) || (value == TAMANHO - 7 && i == 6) || (value == 6 && i == TAMANHO - 7)) {
+                    continue;
+                }
+                if (col == value && fil == i) {
+                    invade = true;
+                } else {
+                    if (col >= value - 2 && col <= value + 2 && fil >= i - 2 && fil <= i+2) {
+                        invade = true;
+                    }
+                }
+            }
+        }
+        return invade;
     }
 
     /**
@@ -776,5 +1207,3 @@ public class QR {
     }
 
 }
-
-

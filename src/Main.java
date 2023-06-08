@@ -11,8 +11,9 @@ public class Main {
     public static void main(String[] args) {
 
         //System.out.println(Polinomio.generator(30));
-        String prueba = "HELLO WORLD";
-        QR qr = new QR(prueba, 0, 4);
+        String prueba = "HELLO WORLD - HELLO WORLD";
+        QR qr = new QR(prueba, 3, 4);
+        System.out.println(qr);
         /*String prueba = "a";
         for (int i = 1; i <= 2953; i++) {
             QR qr = new QR(prueba, 1,4);

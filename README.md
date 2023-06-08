@@ -117,6 +117,10 @@ Para obtener el polinomios generador y el polinomio de mensaje, usamos las clase
 en ciertos métodos para que lo que la clase QR genere pueda ser compatible. Ya se obtiene el polinomio resultado
 de hacer la división polinomial con el generador y el de mensaje.
 
+Me salté accidentalmente la división de las codewords de información por grupos y por bloques, y la página [Error Correction Coding](https://www.thonky.com/qr-code-tutorial/error-correction-coding)
+indica que se deben obtener los datos del Reed Solomon por cada bloque individualmente... Así que ahora el siguiente paso será tener más listas en el formato
+de las listas CODEWORDS Y ERR_BLOCKS_LIST. 
+
 
 
 
