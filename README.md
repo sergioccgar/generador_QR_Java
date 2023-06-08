@@ -2,12 +2,17 @@
 ## *Equipo: Avonlea*
 ### Integrante~~s~~: Sergio Medina Guzmán 314332428
 
-## Para ejecutar los requisitos de la práctica:
+## Para ejecutar los requisitos de la práctica
 
 
 
 
 ### Introducción:
+INFORMACIÓN IMPORTANTE: Las clases Polinomio.java y ReedSolomonEC.java fueron proporcionadas en su totalidad
+por el ayudante David Armando Silva de Paz de la clase Teoría de Códigos impartida por la profesora Anayanzi Delia Martínez Hernández.
+Así mismo, el esqueleto de las clases QR.java y Main.java fueron también proporcionadas por David; dichos esqueletos
+pueden consultarse en la carpeta orig de este repositorio. Lo demás ha sido programado por un servidor.
+
 Los códigos QR, o códigos de respuesta rápida, son una forma de tecnología de código de barras bidimensional que se ha vuelto ampliamente popular en los últimos años. Fueron inventados por la compañía japonesa Denso Wave en 1994 y desde entonces han sido utilizados en una amplia variedad de aplicaciones.
 
 Los códigos QR están compuestos por un patrón de cuadrados en blanco y negro dispuestos en una cuadrícula. Estos códigos pueden almacenar una gran cantidad de información, como texto, enlaces a sitios web, información de contacto, números de teléfono y mucho más. 
@@ -73,6 +78,41 @@ almacenados dichos datos para que dada una cadena y un nivel de corrección la c
 necesaria para que sea de tamaño mínimo posible para almacenar los caracteres de la cadena. Esto implicará que
 el constructor de la clase QR ya no recibirá como parámetro la versión en la que se desea almacenar la información.
 Ahora sólo recibirá la cadena por almacenar, el nivel de corrección de error y la máscara.
+
+El modo de codificación, por ahora, será Byte Mode, por lo que será constante y será el valor numérico
+4, que es 0100.
+
+El tamaño del mensaje cambia dependiendo de la versión de código QR utilizada, siguiendo los datos en [
+Data Encoding](https://www.thonky.com/qr-code-tutorial/data-encoding), tenemos que para los códigos versión 
+1 a 9, la cadena binaria de longitud del mensaje será de 8 bits, para versiones 10 a 40, de 16 bits.
+
+Codificamos el texto a binario completando el cuerpo del método textoABinario().
+
+Luego, debemos unir las cadenas binarias del modo de codificación, longitud del mensaje, del mensaje en binario
+y luego vemos si la cadena resultante es menor o igual al número de bits necesarios para la versión y codificación
+en la cual se esté trabajando, se usa la información de la página [Error Correction Code Words and Block Information](https://www.thonky.com/qr-code-tutorial/error-correction-table);
+se obtiene de la página el número de bloques necesarios para cada versión y nivel de corrección y se guardan en una lista llamada 
+CODEWORDS. Esta lista sigue el orden de la página, cada 4 datos se sube de versión, es decir, comenzando la lista tenemos 19, 16, 13, 9, que corresponden
+a los bits necesarios en un QR versión 1 con nivel de corrección L, M, Q H, respectivamente. Los siguientes 4 elementos corresponden
+al QR versión dos con los niveles de corrección en el mismo orden. Dado este formato, al calcularse la versión del código QR a utilizar
+en el constructor, se puede obtener cuántos bits se necesitan para llenar este código. Multiplicar por 4 la versión V y sumarle 1
+nos dará el índice i de CODEWORDS tal que el valor de CODEWORDS[i] es el número de bits que necesita un código QR versión V con nivel de
+corrección L. A este índice le sumamos r+(-1)<sup>r+2</sup>, donde r es el valor decimal que corresponde al nivel de recuperación,
+esto es 1, 0, 3 y 2 para L, M, Q, H. Es una fórmula que se me ocurrió, jaja, si el nivel de corrección es L, r = 1, y la fórmula
+evalúa a 0, por lo que nos quedamos en el mismo índice. Si es M, se le suma 1 al índice, pues la fórmula queda 0+(-1)<sup>0+2</sup> = 1,
+lo que nos lleva a CODEWORDS[i+1], que es justamente el nivel de corrección M para la versión V. Si es 3 (Q), la fórmula es 3+(-1)<sup>3+2</sup> = 2,
+lo que nos lleva a CODEWORDS[i+2]; finalmente, si es 2 (H), la fórmula queda 2+(-1)<sup>2+2</sup> = 3, lo que nos lleva a 
+CODEWORDS[i+3].
+
+Listo, ya tenemos todos los bits necesarios para llenar el código QR. Ahora sólo resta codificar la detección de errores con el
+método Reed Solomon. Según la página [Error Correction Coding](https://www.thonky.com/qr-code-tutorial/error-correction-coding), necesitamos
+obtener el polinomio del mensaje y el polinomio generador. Para obtener el polinomio del mensaje, debemos partir
+toda la cadena de bits en bloques de 8, y convertir cada bloque en su valor decimal. Estos serán los coeficientes
+de un polinomio de la forma (a<sub>n</sub>x<sup>n</sup> + a<sub>n-1</sub>x<sup>n-1</sup> + ... + a<sub>1</sub>x<sup>1</sup> + a<sub>0</sub>x<sup>0</sup>).
+Para obtener el polinomio generador usaremos el método generator() de la clase Polinomio; el argumento para dicho método se
+obtendrá de acuerdo a qué versión y nivel de corrección usaremos, basándonos en la tabla de la página [Error Correction Code Words and Block Information](https://www.thonky.com/qr-code-tutorial/error-correction-table), de la
+columna EC Codewords Per Block; almacenaremos estos datos en una lista similar en formato a la lista CODEWORDS.
+
 
 
 
@@ -147,7 +187,7 @@ recuperar la información del código QR a pesar de la presencia de dicho "ruido
    
    para el siguiente QR?
 
-   ![](qr.jpg)
+   ![](src/qr.jpg)
 
 7. Menciona al menos 5 variantes (y adjunta imágen) de códigos QR.
 Según la página de la compañía japonesa, DENSO WAVE, creadora de los códigos QR, tenemos las siguientes variantes
@@ -158,7 +198,7 @@ de los códigos QR:
    4. y Frame QR
 Imágenes:
 
-![](variants.jpg)
+![](src/variants.jpg)
 
 El quinto tipo que menciona la web es el código QR con el que trabajamos. Ninguno de estos tipos de variantes
 son los códigos que mencioné en el punto xi de la pregunta 2... queda hacer una búsqueda...
@@ -168,7 +208,7 @@ por la compañía ID Matriz en 1987:
 8. El siguiente código QR se le ha eliminado información importante, pero sabiendo que tenía la máscara
 010 (3) aplica la máscara para sacar el mensaje oculto que guarda, leyendo de la misma forma en la que
 se escribe.
-![](qr2.jpg)
+![](src/qr2.jpg)
 ...
 
 El mensaje... es... "cheems"...
@@ -177,8 +217,8 @@ Procedimiento:
 - Las siguientes 8 celdas, leyendo como se vio en laboratorio, indican la longitud del mensaje: 6.
 - Los siguientes 6 bloques de 8 celdas cada uno, indicarán el valor en binario del caracter codificado: cheems
 - Después de los 6 bloques de 8 celdas, hay un bloque de 4 celdas, que indica el final del mensaje.
-![](hm.jpg)
-![](hm2.jpg)
+![](src/hm.jpg)
+![](src/hm2.jpg)
 
 9. Si podemos guardar cualquier tipo de informacion, podemos guardar fotografías o videos dentro de un
 QR?

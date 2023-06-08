@@ -18,7 +18,9 @@ public class QR {
     /* Tipo máscara [0-7]*/
     private String MASCARA;
     /* Tipo Codificación [0-8]*/
-    private int CODIFICACION;
+    private String CODIFICACION;
+    /* Longitud del mensaje */
+    private String LONG_MENSAJE;
     /* Tamaño mensaje */
     private int TAMAÑO_MENSAJE;
     /* Recuperación de error [0-3]*/
@@ -44,46 +46,145 @@ public class QR {
     private int[] BM_Max_M = {14, 26, 42, 62, 84, 106, 122, 152, 180, 213, 251, 287, 331, 362, 412, 450, 504, 560, 624, 666, 711, 779, 857, 911, 997, 1059, 1125, 1190, 1264, 1370, 1452, 1538, 1628, 1722, 1809, 1911, 1989, 2099, 2213, 2331};
     private int[] BM_Max_Q = {11, 20, 32, 46, 60, 74, 86, 108, 130, 151, 177, 203, 241, 258, 292, 311, 364, 394, 442, 482, 509, 565, 611, 661, 715, 751, 805, 868, 908, 982, 1030, 1112, 1168, 1228, 1283, 1351, 1423, 1499, 1579, 1663};
     private int[] BM_Max_H = {7, 14, 24, 34, 44, 58, 64, 84, 98, 119, 137, 155, 177, 194, 220, 250, 280, 310, 338, 382, 403, 439, 461, 511, 535, 593, 625, 658, 698, 742, 790, 842, 898, 958, 983, 1051, 1093, 1139, 1219, 1273};
-    /* Variable de prueba */
-    private int recuprueba;
+    /* Valor del nivel de recuperación en decimal */
+    private int RECUPERACION_DEC;
+    /* Cadena de bits a guardar en el QR */
+    private String bits;
+
+    private int[] CODEWORDS = {
+            19, 16, 13, 9,
+            34, 28, 22, 16,
+            55, 44, 34, 26,
+            80, 64, 48, 36,
+            108, 86, 62, 46,
+            136, 108, 76, 60,
+            156, 124, 88, 66,
+            194, 154, 110, 86,
+            232, 182, 132, 100,
+            274, 216, 154, 122,
+            324, 254, 180, 140,
+            370, 290, 206, 158,
+            428, 334, 244, 180,
+            461, 365, 261, 197,
+            523, 415, 295, 223,
+            589, 453, 325, 253,
+            647, 507, 367, 283,
+            721, 563, 397, 313,
+            795, 627, 445, 341,
+            861, 669, 485, 385,
+            932, 714, 512, 406,
+            1006, 782, 568, 442,
+            1094, 860, 614, 464,
+            1174, 914, 664, 514,
+            1276, 1000, 718, 538,
+            1370, 1062, 754, 596,
+            1468, 1128, 808, 628,
+            1531, 1193, 871, 661,
+            1631, 1267, 911, 701,
+            1735, 1373, 985, 745,
+            1843, 1455, 1033, 793,
+            1955, 1541, 1115, 845,
+            2071, 1631, 1171, 901,
+            2191, 1725, 1231, 961,
+            2306, 1812, 1286, 986,
+            2434, 1914, 1354, 1054,
+            2566, 1992, 1426, 1096,
+            2702, 2102, 1502, 1142,
+            2812, 2216, 1582, 1222,
+            2956, 2334, 1666, 1276
+            };
+
+    /* Bits necesarios para llenar el código QR de la versión que sea con el nivel de corrección dado. */
+    private int BITS_NECESARIOS;
 
     public QR(String texto, int recuperacion, int mascara){
         this.texto = texto;
         binario = "";
         MASCARA = String.format("%" + 3 + "s", Integer.toBinaryString(mascara)).replace(' ', '0');
         RECUPERACION = String.format("%" + 2 + "s", Integer.toBinaryString(recuperacion)).replace(' ', '0');
-        recuprueba = recuperacion;
-        CODIFICACION = 3; //ASCII
+        RECUPERACION_DEC = recuperacion;
+        CODIFICACION = String.format("%" + 4 + "s", Integer.toBinaryString(3)).replace(' ', '0');
         TAMAÑO_MENSAJE = texto.length();
+        textoABinario();
         switch (recuperacion) {
             case 1: //L
+                if (texto.length() > 2953) { // Si se eligió este nivel de corrección pero el texto es demasiado grande, ser recortará a la máxima capacidad para dicho nivel de corrección.
+                    System.out.println("Demasiada información, se recortará el texto a: ");
+                    texto = texto.substring(0, 2953);
+                    System.out.println(texto);
+                }
                 buscarNumero(texto.length(), BM_Max_L);
                 break;
             case 0: //M
+                if (texto.length() > 2331) {
+                    System.out.println("Demasiada información, se recortará el texto a: ");
+                    texto = texto.substring(0, 2331);
+                    System.out.println(texto);
+                }
                 buscarNumero(texto.length(), BM_Max_M);
                 break;
             case 3: //Q
+                if (texto.length() > 1663) {
+                    System.out.println("Demasiada información, se recortará el texto a: ");
+                    texto = texto.substring(0, 1663);
+                    System.out.println(texto);
+                }
                 buscarNumero(texto.length(), BM_Max_Q);
                 break;
             case 2: //H
+                if (texto.length() > 1273) {
+                    System.out.println("Demasiada información, se recortará el texto a: ");
+                    texto = texto.substring(0, 1273);
+                    System.out.println(texto);
+                }
                 buscarNumero(texto.length(), BM_Max_H);
                 break;
         }
         TAMANHO = 21 + (VERSION-1)*4;
         qr = new boolean[TAMANHO][TAMANHO];
         //System.out.println("Version: " + VERSION);
+        if (VERSION > 9) {
+            LONG_MENSAJE = String.format("%" + 16 + "s", Integer.toBinaryString(texto.length())).replace(' ', '0');
+        } else {
+            LONG_MENSAJE = String.format("%" + 8 + "s", Integer.toBinaryString(texto.length())).replace(' ', '0');
+        }
+        // System.out.println(LONG_MENSAJE);
+        // System.out.println(LONG_MENSAJE.length());
+        //+(RECUPERACION_DEC-(int)Math.pow(-1, RECUPERACION_DEC+2))
+        BITS_NECESARIOS = CODEWORDS[((VERSION-1)*4)+(RECUPERACION_DEC+(int)Math.pow(-1, RECUPERACION_DEC+2))]*8;
+        bits = "" + CODIFICACION + LONG_MENSAJE + binario; // Cadena que contiene el nivel de corrección, la longitud del mensaje y el mensaje en binario
+        // Se agregan los bits 0 de fin de mensaje.
+        if (bits.length() + 4 <= BITS_NECESARIOS) {
+            bits += "0000";
+        } else {
+            while (bits.length() < BITS_NECESARIOS) {
+                bits += "0";
+            }
+        }
+        while (bits.length() % 8 != 0) {
+            bits += "0";
+        }
 
+        String[] pad_bits = {"11101100", "00010001"};
+        int i = 0;
+        while (bits.length() < BITS_NECESARIOS) {
+            bits += pad_bits[i];
+            i = (i+1) % 2;
+        }
 
-        String bin = textoABinario(texto);
+        //System.out.println(bits.length());
+        //System.out.println(bits.substring(100));
+        //String bin = textoABinario();
         construyeQR();
         //System.out.println(toString());
         //System.out.println(RECUPERACION);
         //System.out.println(MASCARA);
+        System.out.println(VERSION);
     }
     /**
      *
      */
-    public boolean prueba(){
+    /*public boolean prueba(){
         switch (recuprueba) {
             case 1: //L
                 return (texto.length() <= BM_Max_L[VERSION-1]);
@@ -97,7 +198,7 @@ public class QR {
                 System.out.println("???");
                 return false;
         }
-    }
+    }*/
 
 
     /**
@@ -514,8 +615,13 @@ public class QR {
      * ej: "A" -> "01000001"
      * @return la cadena s en binario como una cadena de booleanos.
      */
-    private String textoABinario(String s){
-        return null;
+    private void textoABinario(){
+        char[] chars = texto.toCharArray();
+        String cadena_binaria = "";
+        for (char a : chars) {
+            cadena_binaria += String.format("%" + 8 + "s", Integer.toBinaryString((int) a)).replace(' ', '0');
+        }
+        binario = cadena_binaria;
     }
 
     /**
