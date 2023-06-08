@@ -113,6 +113,10 @@ Para obtener el polinomio generador usaremos el método generator() de la clase 
 obtendrá de acuerdo a qué versión y nivel de corrección usaremos, basándonos en la tabla de la página [Error Correction Code Words and Block Information](https://www.thonky.com/qr-code-tutorial/error-correction-table), de la
 columna EC Codewords Per Block; almacenaremos estos datos en una lista similar en formato a la lista CODEWORDS.
 
+Para obtener el polinomios generador y el polinomio de mensaje, usamos las clases Polinomio y ReedSolomonEC, modificadas
+en ciertos métodos para que lo que la clase QR genere pueda ser compatible. Ya se obtiene el polinomio resultado
+de hacer la división polinomial con el generador y el de mensaje.
+
 
 
 

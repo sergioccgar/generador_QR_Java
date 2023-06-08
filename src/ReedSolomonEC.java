@@ -90,7 +90,7 @@ public class ReedSolomonEC {
      * Construye un código de recuperación para un N-M QR
      * El número de errBlocks estará dado por la tabla de arriba, por ahora
      * no nos interesa hacer códigos QR que no sean v1 y con un nivel de recuperación diferente a L.
-     * @param mensaje El mensaje a sacar los bloques de corrección en orden.
+     * @param mensaje Cadena de bits a la cual se le aplicará el algoritmo Reed Solomon.
      * @param level El nivel de corrección. (L, M, Q, H)
      * @param version la versión del QR (1 - 40)
      * @param errBlocks el número de bloques de recuperación.
@@ -102,9 +102,9 @@ public class ReedSolomonEC {
         this.errBlocks = errBlocks;
         
         this.generatorPoly = Polinomio.generator(errBlocks);
-        System.out.println("Polinomio generador en notación alpha:\n" + generatorPoly);
+        //System.out.println("Polinomio generador en notación alpha:\n" + generatorPoly);
         messagePoly = Polinomio.messagePoly(mensaje);
-        System.out.println("\nPolinomio del mensaje en notacion entera:\n" + messagePoly);
+        //System.out.println("\nPolinomio del mensaje en notacion entera:\n" + messagePoly);
         preludio();
         division();
     }
@@ -117,6 +117,10 @@ public class ReedSolomonEC {
         return coeficientes;
     }
 
+    /**
+     * Getter del resultado de la división.
+     */
+    public Polinomio getResultado() { return resultado; }
 
     /**
      * Método que divide n veces el mensaje para obtener el mensaje de recuperación.
@@ -124,7 +128,7 @@ public class ReedSolomonEC {
     private void division() {
         resultado = messagePoly.copia();
 
-        for (int i = 0; i < mensaje.length(); i++){
+        for (int i = 0; i < mensaje.length()/8; i++){
             //Obtener el primer coeficiente como un polinomio.
             resultado.toAlphaNotation();
             Polinomio.Termino highest = resultado.getPrimerTermino();

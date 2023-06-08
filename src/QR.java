@@ -50,6 +50,8 @@ public class QR {
     private int RECUPERACION_DEC;
     /* Cadena de bits a guardar en el QR */
     private String bits;
+    /* Cadena de bits después de aplicarles el método Reed Solomon */
+    private String RS_bits;
 
     private int[] CODEWORDS = {
             19, 16, 13, 9,
@@ -97,18 +99,65 @@ public class QR {
     /* Bits necesarios para llenar el código QR de la versión que sea con el nivel de corrección dado. */
     private int BITS_NECESARIOS;
 
+    private int[] ERR_BLOCKS_LIST = {
+            7, 10, 13, 17,
+            10, 16, 22, 28,
+            15, 26, 18, 22,
+            20, 18, 26, 16,
+            26, 24, 18, 22,
+            18, 16, 24, 28,
+            20, 18, 18, 26,
+            24, 22, 22, 26,
+            30, 22, 20, 24,
+            18, 26, 24, 28,
+            20, 30, 28, 24,
+            24, 22, 26, 28,
+            26, 22, 24, 22,
+            30, 24, 20, 24,
+            22, 24, 30, 24,
+            24, 28, 24, 30,
+            28, 28, 28, 28,
+            30, 26, 28, 28,
+            28, 26, 26, 26,
+            28, 26, 30, 28,
+            28, 26, 28, 30,
+            28, 28, 30, 24,
+            30, 28, 30, 30,
+            30, 28, 30, 30,
+            26, 28, 30, 30,
+            28, 28, 28, 30,
+            30, 28, 30, 30,
+            30, 28, 30, 30,
+            30, 28, 30, 30,
+            30, 28, 30, 30,
+            30, 28, 30, 30,
+            30, 28, 30, 30,
+            30, 28, 30, 30,
+            30, 28, 30, 30,
+            30, 28, 30, 30,
+            30, 28, 30, 30,
+            30, 28, 30, 30,
+            30, 28, 30, 30,
+            30, 28, 30, 30,
+            30, 28, 30, 30
+    };
+
+    /* Bloques necesarios de corrección */
+    private int ERR_BLOCKS;
+
     public QR(String texto, int recuperacion, int mascara){
         this.texto = texto;
         binario = "";
         MASCARA = String.format("%" + 3 + "s", Integer.toBinaryString(mascara)).replace(' ', '0');
         RECUPERACION = String.format("%" + 2 + "s", Integer.toBinaryString(recuperacion)).replace(' ', '0');
         RECUPERACION_DEC = recuperacion;
-        CODIFICACION = String.format("%" + 4 + "s", Integer.toBinaryString(3)).replace(' ', '0');
+        CODIFICACION = String.format("%" + 4 + "s", Integer.toBinaryString(2)).replace(' ', '0'); //cambiar a 4, byte mode
+        System.out.println(CODIFICACION);
         TAMAÑO_MENSAJE = texto.length();
         textoABinario();
         switch (recuperacion) {
             case 1: //L
-                if (texto.length() > 2953) { // Si se eligió este nivel de corrección pero el texto es demasiado grande, ser recortará a la máxima capacidad para dicho nivel de corrección.
+                if (texto.length() > 2953) { // Si se eligió este nivel de corrección, pero el texto es demasiado grande, ser recortará a la máxima capacidad para dicho nivel de corrección.
                     System.out.println("Demasiada información, se recortará el texto a: ");
                     texto = texto.substring(0, 2953);
                     System.out.println(texto);
@@ -142,15 +191,13 @@ public class QR {
         }
         TAMANHO = 21 + (VERSION-1)*4;
         qr = new boolean[TAMANHO][TAMANHO];
-        //System.out.println("Version: " + VERSION);
+
         if (VERSION > 9) {
             LONG_MENSAJE = String.format("%" + 16 + "s", Integer.toBinaryString(texto.length())).replace(' ', '0');
         } else {
             LONG_MENSAJE = String.format("%" + 8 + "s", Integer.toBinaryString(texto.length())).replace(' ', '0');
         }
-        // System.out.println(LONG_MENSAJE);
-        // System.out.println(LONG_MENSAJE.length());
-        //+(RECUPERACION_DEC-(int)Math.pow(-1, RECUPERACION_DEC+2))
+
         BITS_NECESARIOS = CODEWORDS[((VERSION-1)*4)+(RECUPERACION_DEC+(int)Math.pow(-1, RECUPERACION_DEC+2))]*8;
         bits = "" + CODIFICACION + LONG_MENSAJE + binario; // Cadena que contiene el nivel de corrección, la longitud del mensaje y el mensaje en binario
         // Se agregan los bits 0 de fin de mensaje.
@@ -171,16 +218,9 @@ public class QR {
             bits += pad_bits[i];
             i = (i+1) % 2;
         }
-
-        //System.out.println(bits.length());
-        //System.out.println(bits.substring(100));
-        //String bin = textoABinario();
         construyeQR();
-        //System.out.println(toString());
-        //System.out.println(RECUPERACION);
-        //System.out.println(MASCARA);
-        System.out.println(VERSION);
     }
+
     /**
      *
      */
@@ -306,6 +346,26 @@ public class QR {
         if (VERSION >= 7) {
             versInf();
         }
+        String nivel = "";
+        switch (RECUPERACION_DEC) {
+            case 1:
+                nivel = "L";
+                break;
+            case 0:
+                nivel = "M";
+                break;
+            case 3:
+                nivel = "Q";
+                break;
+            case 2:
+                nivel = "H";
+                break;
+        }
+        ERR_BLOCKS = ERR_BLOCKS_LIST[((VERSION-1)*4)+(RECUPERACION_DEC+(int)Math.pow(-1, RECUPERACION_DEC+2))];
+        //System.out.println(bits);
+        ReedSolomonEC rs = new ReedSolomonEC(bits, nivel, VERSION, ERR_BLOCKS);
+        Polinomio resultado = rs.getResultado();
+        System.out.println(resultado);
     }
 
     /**

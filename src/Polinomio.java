@@ -628,15 +628,25 @@ public class Polinomio {
      * Crea un polinomio cuyos coeficientes con los caracteres en binario
      * y las potencias son la longitud del mensaje.
      * "Hi" -> 72x^(1) + 105x^(0) == 72x + 105
+     * Nota: se ha modificado, pues mensaje ya es una cadena de bits. Se separarán de 8 en 8 y cada byte
+     * que esta separación dé se convertirá a su valor decimal, el cual será un coeficiente del mensaje.
      * El grado de "H" será "Hi".length-1 hasta 0
      * @return el polinomio generado a partir de los coeficientes del mensaje.
      */
     public static Polinomio messagePoly(String mensaje) {
         Polinomio m = new Polinomio();
-        for (int i = 0; i < mensaje.length(); i++){
+        /*for (int i = 0; i < mensaje.length(); i++){
             char c = mensaje.charAt(i);
             int ascii = (int)c;
             int grado = mensaje.length()-(i+1);
+            Termino t = new Termino(ascii, grado);
+            m.agregaTermino(t);
+        }*/
+        for (int i = 0; i < mensaje.length(); i+=8){
+            //System.out.println(mensaje.substring(i, Math.min(i + 8, mensaje.length())));
+            int ascii = Integer.parseInt(mensaje.substring(i, Math.min(i + 8, mensaje.length())),2);
+            //System.out.println(ascii);
+            int grado = (mensaje.length()/8)-((i/8)+1);
             Termino t = new Termino(ascii, grado);
             m.agregaTermino(t);
         }
