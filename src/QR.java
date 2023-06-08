@@ -1,4 +1,9 @@
 import java.lang.annotation.Target;
+import java.awt.Graphics2D;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import javax.imageio.ImageIO;
 
 /**
  * Clase que dado una cadena, crea su respectivo código QR para ser escaneado con 
@@ -1205,5 +1210,49 @@ public class QR {
     private void rellenoIzq(int x, int y, String bites ){
 
     }
+
+    public void crearImagen() {
+        mascara();
+        BufferedImage img = new BufferedImage(29, 29, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = (Graphics2D) img.getGraphics();
+        int nuevoColor = 0xFFFFFFFF;
+        g2d.setColor(new java.awt.Color(nuevoColor));
+        for (int i = 0; i < 29; i++) {
+            for (int j = 0; j <29; j++) {
+                g2d.fillRect(i, j, 1, 1);
+            }
+        }
+        nuevoColor = 0;
+        g2d.setColor(new java.awt.Color(nuevoColor));
+        for (int i = 0; i < 29; i++) {
+            for (int j = 0; j <29; j++) {
+                if (qr[i][j]==true) {
+                    g2d.fillRect(i, j, 1, 1);
+                }
+            }
+        }
+        g2d.dispose();
+
+        // Guardar la imagen modificada
+        File archivo = new File("img.png");
+        try {
+            ImageIO.write(img, "png", archivo);
+        } catch (IOException e) {
+            System.out.println("Error al leer o guardar la imagen: " + e.getMessage());
+        }
+
+
+    }
+
+    private void mascara() {
+        for (int i = 0; i < 29; i++) {
+            for (int j = 0; j <29; j++) {
+                if (moduloLibre(i, j) && (i+j)%2 == 0) {
+                    qr[i][j] = ! qr[i][j];
+                }
+            }
+        }
+    }
+
 
 }
