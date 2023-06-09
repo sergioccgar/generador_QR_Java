@@ -167,9 +167,12 @@ public class QR {
         MASCARA = String.format("%" + 3 + "s", Integer.toBinaryString(mascara)).replace(' ', '0');
         RECUPERACION = String.format("%" + 2 + "s", Integer.toBinaryString(recuperacion)).replace(' ', '0');
         RECUPERACION_DEC = recuperacion;
+        System.out.println(RECUPERACION);
         CODIFICACION = String.format("%" + 4 + "s", Integer.toBinaryString(4)).replace(' ', '0'); //cambiar a 4, byte mode
+        System.out.println(CODIFICACION);
         TAMAÑO_MENSAJE = texto.length();
         textoABinario();
+        System.out.println("texto en binario: " + binario);
         switch (recuperacion) {
             case 1: //L
                 if (texto.length() > 2953) { // Si se eligió este nivel de corrección, pero el texto es demasiado grande, ser recortará a la máxima capacidad para dicho nivel de corrección.
@@ -204,7 +207,7 @@ public class QR {
                 buscarNumero(texto.length(), BM_Max_H);
                 break;
         }
-        TAMANHO = 21 + (VERSION-1)*4;
+        TAMANHO = 21 + (VERSION-1) * 4;
         qr = new boolean[TAMANHO][TAMANHO];
 
         if (VERSION > 9) {
@@ -213,30 +216,54 @@ public class QR {
             LONG_MENSAJE = String.format("%" + 8 + "s", Integer.toBinaryString(texto.length())).replace(' ', '0');
         }
 
+        System.out.println("Longitud del mensaje en binario: " + LONG_MENSAJE);
+
         BITS_NECESARIOS = CODEWORDS[((VERSION-1)*4)+(RECUPERACION_DEC+(int)Math.pow(-1, RECUPERACION_DEC+2))]*8;
+        System.out.println("Bits necesarios: " + BITS_NECESARIOS);
+        System.out.println("Codificación (byte mode): " + CODIFICACION);
+        System.out.println("La longitud del mensaje en binario es: " + LONG_MENSAJE);
+        System.out.println("El mensaje en binario es: " + binario);
         bits = "" + CODIFICACION + LONG_MENSAJE + binario; // Cadena que contiene el nivel de corrección, la longitud del mensaje y el mensaje en binario
+        System.out.println("Por lo que la cadena es:" + bits);
         // Se agregan los bits 0 de fin de mensaje.
+        System.out.println("La cantidad de bits que tenemos es: " + bits.length());
         if (bits.length() + 4 <= BITS_NECESARIOS) {
             bits += "0000";
+            System.out.println("Se agregaron 4 bits. Ahora la cantidad de bits que tenemos es: " + bits.length());
         } else {
             while (bits.length() < BITS_NECESARIOS) {
                 bits += "0";
             }
         }
         while (bits.length() % 8 != 0) {
+            System.out.println("Se agregaron tantos 0s para que la cadena de bits sea de longitud multiplo de 8.");
             bits += "0";
         }
-
+        System.out.println("La cantidad de bits que tenemos es: " + bits.length());
+        // Ahora, mientras no tengamos una cadena de 272 bits, debemos agregar los pad_bytes
         String[] pad_bits = {"11101100", "00010001"};
         int i = 0;
         while (bits.length() < BITS_NECESARIOS) {
             bits += pad_bits[i];
             i = (i+1) % 2;
         }
+        System.out.println("La cadena de bits ahora tiene: " + bits.length() + " bits.");
         /* Esta parte considera trabajar con un QR v3 Q. Necesitaremos 2 bloques de datawords*/
         data_blocks = new String[2];
         data_blocks[0] = bits.substring(0, 136);
+        System.out.println("El primer bloque es: " + data_blocks[0] + " y es de longitud: " + data_blocks[0].length());
+        System.out.println("Este bloque contiene: " +  data_blocks[0].length()/8 + " codewords.");
+        System.out.println("Las codewords son: ");
+        for (int j = 0; j < data_blocks[0].length(); j+=8) {
+            System.out.println(data_blocks[0].substring(j, j+8) + " = " + Integer.parseInt(data_blocks[0].substring(j, j+8),2));
+        }
         data_blocks[1] = bits.substring(136);
+        System.out.println("El segundo bloque es: " + data_blocks[1] + " y es de longitud: " + data_blocks[1].length());
+        System.out.println("Este bloque contiene: " +  data_blocks[1].length()/8 + " codewords.");
+        System.out.println("Las codewords son: ");
+        for (int j = 0; j < data_blocks[1].length(); j+=8) {
+            System.out.println(data_blocks[1].substring(j, j+8) + " = " + Integer.parseInt(data_blocks[1].substring(j, j+8),2));
+        }
         /* Fin */
         construyeQR();
     }
@@ -366,7 +393,7 @@ public class QR {
         if (VERSION >= 7) {
             versInf();
         }
-        String nivel = "";
+        /*String nivel = "";
         switch (RECUPERACION_DEC) {
             case 1:
                 nivel = "L";
@@ -380,17 +407,21 @@ public class QR {
             case 2:
                 nivel = "H";
                 break;
-        }
+        }*/
         ERR_BLOCKS = ERR_BLOCKS_LIST[((VERSION-1)*4)+(RECUPERACION_DEC+(int)Math.pow(-1, RECUPERACION_DEC+2))];
+        System.out.println("Necesitamos " + ERR_BLOCKS + " bloques de corrección de errores por cada bloque de data codewords.");
         //System.out.println(bits);
         /*ReedSolomonEC rs = new ReedSolomonEC(bits, nivel, VERSION, ERR_BLOCKS);
         Polinomio resultado = rs.getResultado();
         System.out.println(resultado);*/
         /* v3 - Q */
-        ReedSolomonEC rs1 = new ReedSolomonEC(data_blocks[0], nivel, VERSION, ERR_BLOCKS);
-        ReedSolomonEC rs2 = new ReedSolomonEC(data_blocks[1], nivel, VERSION, ERR_BLOCKS);
+        ReedSolomonEC rs1 = new ReedSolomonEC(data_blocks[0], VERSION, ERR_BLOCKS);
+        ReedSolomonEC rs2 = new ReedSolomonEC(data_blocks[1], VERSION, ERR_BLOCKS);
         Polinomio resultado1 = rs1.getResultado();
         Polinomio resultado2 = rs2.getResultado();
+        System.out.println("El resultado 1 es: " + resultado1);
+        System.out.println("El resultado 2 es: " + resultado2);
+
         int[] ec_cw_block_1 = new int[resultado1.getLista().size()];
         for (int i = 0; i < ec_cw_block_1.length; i++) {
             int index = resultado1.getLista().get(i).toString().indexOf("x");
@@ -401,9 +432,14 @@ public class QR {
             int index = resultado2.getLista().get(i).toString().indexOf("x");
             ec_cw_block_2[i] = Integer.parseInt(resultado2.getLista().get(i).toString().substring(0, index));
         }
-        // System.out.println(data_blocks[0].length()/8);
+
         int[] data_cw_block_1 = dataCodewords(data_blocks[0]);
         int[] data_cw_block_2 = dataCodewords(data_blocks[1]);
+
+        System.out.println("El primer bloque de data codewords tiene: " + data_cw_block_1.length + " codewords.");
+        System.out.println("El segundo bloque de data codewords tiene: " + data_cw_block_2.length + " codewords.");
+        System.out.println("El primer bloque de ec codewords tiene: " + ec_cw_block_1.length + " codewords.");
+        System.out.println("El segundo bloque de ec codewords tiene: " + ec_cw_block_2.length + " codewords.");
         /*int[] data_cw_block_2 = new int[18];
         for (int i = 0; i < 18; i++) {
             data_cw_block_2[i] = i;
@@ -458,6 +494,7 @@ public class QR {
         System.out.println("]");*/
 
         int interleaved_cw_list_length = interleaved_data.length + interleaved_ECw.length;
+        System.out.println("Tenemos " + interleaved_cw_list_length + " codewords en total.");
         int[] interleaved_cw = new int[interleaved_cw_list_length];
         for (int i = 0; i < interleaved_cw.length; i++) {
             if (i < interleaved_data.length) {
@@ -478,11 +515,11 @@ public class QR {
             interleaved_cw_bin[i] = String.format("%" + 8 + "s", Integer.toBinaryString(interleaved_cw[i])).replace(' ', '0');
         }
 
-        System.out.print("[");
+        /*System.out.print("[");
         for (String x : interleaved_cw_bin) {
             System.out.print(x + ", ");
         }
-        System.out.println("]");
+        System.out.println("]");*/
 
         String final_bits = "";
 
@@ -492,160 +529,8 @@ public class QR {
 
         final_bits += "0000000";
         bits_insertar = final_bits;
+        System.out.println("Se insertarán " + bits_insertar.length() + "bits.");
         insertar_datos();
-
-        /*// Primer columna de bloques
-        for (int i = TAMANHO - 1; i > 8; i--) {
-            if (final_bits.charAt(bits_index) == '1') {
-                //System.out.println("yes1");
-                qr[TAMANHO-1][i] = true;
-            }
-            bits_index += 1;
-            //System.out.println(this);
-            if (final_bits.charAt(bits_index) == '1') {
-                //System.out.println("yes2");
-                qr[TAMANHO-2][i] = true;
-            }
-            bits_index += 1;
-            //System.out.println(this);
-        }
-        // Segunda columna  de bloques
-        for (int i = 9; i < TAMANHO - 1; i++) {
-            if (final_bits.charAt(bits_index) == '1') {
-                //System.out.println("yes1");
-                qr[TAMANHO-3][i] = true;
-            }
-            bits_index += 1;
-            //System.out.println(this);
-            if (final_bits.charAt(bits_index) == '1') {
-                //System.out.println("yes2");
-                qr[TAMANHO-4][i] = true;
-            }
-            bits_index += 1;
-            //System.out.println(this);
-        }
-        // Tercer columna de bloques
-        for (int i = 9; i > TAMANHO - 1; i++) {
-            if ((TAMANHO-5 >= 20 && TAMANHO-5 <= 24) && (i >= 20 && i <= 24)) {
-                System.out.println("[" + (TAMANHO-5) + ", " + i + "]");
-                continue;
-            }
-            if ((TAMANHO-6 >= 20 && TAMANHO-6 <= 24) && (i >= 20 && i <= 24)) {
-                System.out.println("[" + (TAMANHO-6) + ", " + i + "]");
-                continue;
-            }
-            if (final_bits.charAt(bits_index) == '1') {
-                //System.out.println("yes1");
-                qr[TAMANHO-5][i] = true;
-            }
-            bits_index += 1;
-            //System.out.println(this);
-            if (final_bits.charAt(bits_index) == '1') {
-                //System.out.println("yes2");
-                qr[TAMANHO-6][i] = true;
-            }
-            bits_index += 1;
-            //System.out.println(this);
-        }
-        // Cuarta columna de bloques
-        for (int i = TAMANHO - 1; i > 8; i--) {
-            if ((TAMANHO-7 >= 20 && TAMANHO-7 <= 24) && (i >= 20 && i <= 24)) {
-                System.out.println("[" + (TAMANHO-7) + ", " + i + "]");
-                continue;
-            }
-            if ((TAMANHO-8 >= 20 && TAMANHO-8 <= 24) && (i >= 20 && i <= 24)) {
-                System.out.println("[" + (TAMANHO-8) + ", " + i + "]");
-                continue;
-            }
-            if (final_bits.charAt(bits_index) == '1') {
-                //System.out.println("yes1");
-                qr[TAMANHO-7][i] = true;
-            }
-            bits_index += 1;
-            //System.out.println(this);
-            if (final_bits.charAt(bits_index) == '1') {
-                //System.out.println("yes2");
-                qr[TAMANHO-8][i] = true;
-            }
-            bits_index += 1;
-            //System.out.println(this);
-        }
-        for (int i = 9; i > TAMANHO - 1; i++) {
-            if ((TAMANHO-5 >= 20 && TAMANHO-5 <= 24) && (i >= 20 && i <= 24)) {
-
-            } else {
-
-            }
-            if ((TAMANHO-6 >= 20 && TAMANHO-6 <= 24) && (i >= 20 && i <= 24)) {
-                System.out.println("[" + (TAMANHO-6) + ", " + i + "]");
-                continue;
-            }
-            if (final_bits.charAt(bits_index) == '1') {
-                //System.out.println("yes1");
-                qr[TAMANHO-5][i] = true;
-            }
-            bits_index += 1;
-            //System.out.println(this);
-            if (final_bits.charAt(bits_index) == '1') {
-                //System.out.println("yes2");
-                qr[TAMANHO-6][i] = true;
-            }
-            bits_index += 1;
-            //System.out.println(this);
-        }*/
-
-
-        /*System.out.println(data_cw_block_1.length);
-        System.out.println(data_cw_block_2.length);
-        System.out.println(ec_cw_block_1.length);
-        System.out.println(ec_cw_block_2.length);
-        System.out.print("[");
-        for (int x : data_cw_block_1) {
-            System.out.print(x + ", ");
-        }
-        System.out.println("]");
-        System.out.print("[");
-        for (int x : ec_cw_block_1) {
-            System.out.print(x + ", ");
-        }
-        System.out.println("]");
-        System.out.print("[");
-        for (int x : data_cw_block_2) {
-            System.out.print(x + ", ");
-        }
-        System.out.println("]");
-        System.out.print("[");
-        for (int x : ec_cw_block_2) {
-            System.out.print(x + ", ");
-        }
-        System.out.println("]");*/
-        /*System.out.println(data_blocks[0]);
-        System.out.println(data_blocks[1]);
-        System.out.print("[");
-        for (int x : data_cw_block_1) {
-            System.out.print(x + ", ");
-        }
-        System.out.println("]");
-        System.out.print("[");
-        for (int i = 0; i < data_blocks[0].length(); i+=8){
-            //System.out.println(mensaje.substring(i, Math.min(i + 8, mensaje.length())));
-            int ascii = Integer.parseInt(data_blocks[0].substring(i, Math.min(i + 8, data_blocks[0].length())),2);
-            System.out.print(ascii + ", ");
-        }
-        System.out.println("]");
-        System.out.print("[");
-        for (int x : data_cw_block_2) {
-            System.out.print(x + ", ");
-        }
-        System.out.println("]");
-        System.out.print("[");
-        for (int i = 0; i < data_blocks[1].length(); i+=8){
-            //System.out.println(mensaje.substring(i, Math.min(i + 8, mensaje.length())));
-            int ascii = Integer.parseInt(data_blocks[1].substring(i, Math.min(i + 8, data_blocks[1].length())),2);
-            System.out.print(ascii + ", ");
-        }
-        System.out.println("]");*/
-        /* */
     }
 
     /**
@@ -955,17 +840,17 @@ public class QR {
      */
     private void infFormato() {
         String correccion_mascara = RECUPERACION + MASCARA;
-        //System.out.println(correccion_mascara);
+        //System.out.println("corr+masc: " + correccion_mascara);
         String polinomio_generador = "10100110111";
         correccion_mascara = String.format("%-" + 15 + "s", correccion_mascara).replace(' ', '0');
         //System.out.println(correccion_mascara);
         correccion_mascara = correccion_mascara.replaceFirst("^0+(?!$)", "");
         //System.out.println(correccion_mascara);
+        //System.out.println(correccion_mascara.length());
         String xor_final = "101010000010010";
         String temp = "";
         while (correccion_mascara.length() > 10) {
             polinomio_generador = String.format("%-" + correccion_mascara.length() + "s", polinomio_generador).replace(' ', '0');
-            //System.out.println(polinomio_generador);
             for (int i = 0; i < correccion_mascara.length(); i++) {
                 if (polinomio_generador.charAt(i) == correccion_mascara.charAt(i)) {
                     temp += "0";
@@ -1001,6 +886,8 @@ public class QR {
 
         CADENA_FORMATO = correccion_mascara;
         //System.out.println(CADENA_FORMATO);
+        //System.out.println(COORDENADAS_ALINEACION[0]);
+        //System.out.println(COORDENADAS_ALINEACION[1]);
         int k = 8;
         for (int i = 0; i < 7; i++) {
             if (String.valueOf(CADENA_FORMATO.charAt(i)).equals("1")){
@@ -1113,6 +1000,7 @@ public class QR {
      */
     private void textoABinario(){
         char[] chars = texto.toCharArray();
+        System.out.println((int)chars[0]);
         String cadena_binaria = "";
         for (char a : chars) {
             cadena_binaria += String.format("%" + 8 + "s", Integer.toBinaryString((int) a)).replace(' ', '0');
@@ -1121,23 +1009,11 @@ public class QR {
     }
 
     /**
-     * Convierte un número en base 10 a un número en base 2 como string.
-     * Añade los 0 a la izquierda para completar al bloque.
-     * ej: 10 -> "00001010"
-     * @param i el número a convertir
-     * @param block el tamaño del bloque en binario.
-     * @return la cadena en binario de i.
-     */
-    private String numToBin(int i, int block){
-        return null;
-    }
-
-    /**
      * Aplica la máscara a este código QR (boolean[][] qr)
      * @param m la máscara a aplicar al QR sin modificar las zonas restringidas.
      */
-    private void mascara(int m){
-        switch (m){
+    private void mascara(int m) {
+        switch (m) {
             //Máscara de tipo 1
             case 1:
                 break;
@@ -1150,83 +1026,22 @@ public class QR {
 
     }
 
-    /**
-     * Genera la cadena del cual se puede recuperar la información de s.
-     * @param s la cadena original
-     * @return bits de redundancia para la cadena s.
-     */
-    private String recuperacion(String s){
-        return null;
-    }
-
-    /**
-     * Rellena la matriz qr con el byte de información bites codificada a binario.
-     * Escribe el byte desde la posición x, y hacia arriba en zigzag izquierda y derecha.
-     * 0 <-- 1
-     *      X
-     *     /
-     *    /
-     *   /
-     * 1 <-- 0
-     * @param x la posición en x desde donde escribir el byte
-     * @param y la posición en y desde donde escribir el byte
-     * @param bites el byte de información a escribir hacia arriba
-     */
-    private void rellenoArriba(int x, int y, String bites ){
-
-    }
-
-    
-    /**
-     * Rellena la matriz qr con el byte de información bites codificada a binario.
-     * Escribe el byte desde la posición x, y hacia abajo en zigzag izquierda y derecha.
-     * 0 <-- 1
-     *  \     
-     *   \     
-     *    \    
-     *     X
-     * 1 <-- 0
-     * @param x la posición en x desde donde escribir el byte
-     * @param y la posición en y desde donde escribir el byte
-     * @param bites el byte de información a escribir hacia abajo
-     */
-    private void rellenoAbajo(int x, int y, String bites ){
-
-    }
-
-    /**
-     * Rellena la matriz qr con el byte de información bites codificada a binario.
-     * Escribe el byte desde la posición x, y hacia Izq en zigzag izquierda y derecha.
-     *  0 <-- 1 <-- 0 <-- 1
-     *   \               X
-     *    \             /
-     *     \           /
-     *      X         /
-     *  1 <-- 1      1 <-- 0
-     * @param x la posición en x desde donde escribir el byte
-     * @param y la posición en y desde donde escribir el byte
-     * @param bites el byte de información a escribir hacia Izq
-     */
-    private void rellenoIzq(int x, int y, String bites ){
-
-    }
-
     public void crearImagen() {
         mascara();
-        BufferedImage img = new BufferedImage(29, 29, BufferedImage.TYPE_INT_RGB);
+        BufferedImage img = new BufferedImage(29+8, 29+8, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = (Graphics2D) img.getGraphics();
         int nuevoColor = 0xFFFFFFFF;
         g2d.setColor(new java.awt.Color(nuevoColor));
-        for (int i = 0; i < 29; i++) {
-            for (int j = 0; j <29; j++) {
+        for (int i = 0; i < 29+8; i++) {
+            for (int j = 0; j < 29+8; j++) {
                 g2d.fillRect(i, j, 1, 1);
             }
         }
         nuevoColor = 0;
         g2d.setColor(new java.awt.Color(nuevoColor));
-        for (int i = 0; i < 29; i++) {
-            for (int j = 0; j <29; j++) {
-                if (qr[i][j]==true) {
+        for (int i = 4; i < 29+4; i++) {
+            for (int j = 4; j < 29+4; j++) {
+                if (qr[i-4][j-4] == true) {
                     g2d.fillRect(i, j, 1, 1);
                 }
             }
@@ -1234,7 +1049,7 @@ public class QR {
         g2d.dispose();
 
         // Guardar la imagen modificada
-        File archivo = new File("img.png");
+        File archivo = new File("imgsinmasc.png");
         try {
             ImageIO.write(img, "png", archivo);
         } catch (IOException e) {
@@ -1245,13 +1060,19 @@ public class QR {
     }
 
     private void mascara() {
+        int count = 0;
         for (int i = 0; i < 29; i++) {
-            for (int j = 0; j <29; j++) {
-                if (moduloLibre(i, j) && (i+j)%2 == 0) {
+            for (int j = 0; j < 29; j++) {
+                if (moduloLibre(i,j)) {
+                    count += 1;
+                }
+                if (moduloLibre(i, j) && i != 6 && (i+j)%2 == 0) {
                     qr[i][j] = ! qr[i][j];
                 }
             }
         }
+        count -= 13;
+        System.out.println("Hay " + count + " modulos de información.");
     }
 
 

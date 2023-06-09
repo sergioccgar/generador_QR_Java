@@ -121,6 +121,16 @@ Me salté accidentalmente la división de las codewords de información por grup
 indica que se deben obtener los datos del Reed Solomon por cada bloque individualmente... Así que ahora el siguiente paso será tener más listas en el formato
 de las listas CODEWORDS Y ERR_BLOCKS_LIST. 
 
+Después de mucho análisis. En teoría, todo sale bien hasta la obtención de la cadena final que se insertará en el código QR...
+
+Curioso. Al parecer todo encaja para el código QR v3 con corrección Q; el error debe estar en (ah, porque no mencioné hasta apenas en este
+README que los QR no se pueden decodificar por ahora...) la forma en que estoy agregando la información a los módulos libres del código QR.
+Un código QR v3 tiene, según mis cálculos, 565 módulos libres (es decir, no ocupados por el timing, los patrones de alineamiento, etc...) y
+la cadena de bits final que obtuve que contiene toda la información (las data codewords y las error correction codewords) es de tamaño 567.
+Mañana viernes 9 haré más análisis de esto para ver si puedo corregir esto... Creo que he arrinconado el error... debe estar, sí o sí, en la forma
+en que he agregado los bits al QR... 
+
+
 
 
 

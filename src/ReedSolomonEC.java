@@ -74,38 +74,23 @@ public class ReedSolomonEC {
     private Polinomio resultado;
 
     /**
-     * Construye el código de recuperación para un mensaje M
-     * El número de bloques del código de recuperación está dado por 
-     * el mínimo, 7, si el tamaño del mensaje no es mayor a 17.
-     * @param mensaje
-     * @param errBlocks
-     */
-    public ReedSolomonEC(String mensaje, int errBlocks){
-        //El mínimo número de errBlocks es 7 para un 1-L QR
-        this(mensaje, "L", 1, errBlocks < 7 ? 7 : errBlocks);
-    }
-
-
-    /**
      * Construye un código de recuperación para un N-M QR
      * El número de errBlocks estará dado por la tabla de arriba, por ahora
      * no nos interesa hacer códigos QR que no sean v1 y con un nivel de recuperación diferente a L.
      * @param mensaje Cadena de bits a la cual se le aplicará el algoritmo Reed Solomon.
-     * @param level El nivel de corrección. (L, M, Q, H)
      * @param version la versión del QR (1 - 40)
      * @param errBlocks el número de bloques de recuperación.
      */
-    public ReedSolomonEC(String mensaje, String level, int version, int errBlocks){
+    public ReedSolomonEC(String mensaje, int version, int errBlocks){
         this.mensaje = mensaje;
-        this.levelCorrection = level;
         this.version = version;
         this.errBlocks = errBlocks;
         
         this.generatorPoly = Polinomio.generator(errBlocks);
-        //System.out.println("Polinomio generador en notación alpha:\n" + generatorPoly);
+        System.out.println("Polinomio generador en notación alpha:\n" + generatorPoly);
         messagePoly = Polinomio.messagePoly(mensaje);
-        //System.out.println("\nPolinomio del mensaje en notacion entera:\n" + messagePoly);
-        preludio();
+        System.out.println("\nPolinomio del mensaje en notacion entera:\n" + messagePoly);
+        preludio(); // Prepara los polinomios de mensaje y generador para que el leading term tenga el mismo exponente.
         division();
     }
 
@@ -131,6 +116,7 @@ public class ReedSolomonEC {
         for (int i = 0; i < mensaje.length()/8; i++){
             //Obtener el primer coeficiente como un polinomio.
             resultado.toAlphaNotation();
+            //System.out.println("Polinomio de mensaje en notación Alpha:" + resultado);
             Polinomio.Termino highest = resultado.getPrimerTermino();
             Polinomio.Termino nuevo = new Polinomio.Termino(highest.getAlpha(), 0);
             Polinomio termino = new Polinomio();
@@ -147,6 +133,7 @@ public class ReedSolomonEC {
             
             //Quitamos el grado máximo porque la división da 0
             termino.quitaTermino(termino.getLista().get(0));
+            //System.out.println("Polinomio sin el leading 0 term: " + termino);
             //WTF?? 
             generatorPoly.bajarGrado();
             resultado = termino;
@@ -167,16 +154,27 @@ public class ReedSolomonEC {
      */
     public void preludio(){
         int i = messagePoly.gradoMaximo();
+        System.out.println("Grado máximo del polinomio de mensaje: " + i);
         //Multiplicar por x^n
+        System.out.println("Se multiplicará por x^" + errBlocks);
         Polinomio.Termino n = new Polinomio.Termino(1, errBlocks);
         Polinomio p = new Polinomio();
         p.agregaTermino(n);
+        /**//*
+        messagePoly.toAlphaNotation();
+        System.out.println("Polinomio de mensaje en notación alfa: " + messagePoly);
+        *//**/
         messagePoly.multiplicaPolinomio(p);
-
+        System.out.println("Polinomio de mensaje multiplicado por x^"+errBlocks);
+        System.out.println(messagePoly);
+        System.out.println("Por ahora el polinomio generador es:\n"+generatorPoly);
         //Multiplicar por x^m
         n.setExponente(i);
         p.toAlphaNotation();
+        System.out.println("Ahora el polinomio generador es:\n"+generatorPoly);
+
         generatorPoly.multiplicaPolinomio(p);
+        System.out.println("Finalmente el polinomio generador es:\n"+generatorPoly);
 
     }
     

@@ -36,7 +36,7 @@ public class Polinomio {
          * @param exponente el exponente de la potencia de 2 módulo 255
          */
         public Exponente(int exponente){
-            this(2, exponente%255);
+            this(2, exponente   % 255);
         }
 
         /**

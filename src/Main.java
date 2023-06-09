@@ -10,10 +10,11 @@ public class Main {
 
     public static void main(String[] args) {
 
+        //System.out.println(256^285);
         //System.out.println(Polinomio.generator(30));
         String prueba = "HELLO WORLD - HELLO WORLD";
         QR qr = new QR(prueba, 3, 0);
-        System.out.println(qr);
+        //System.out.println(qr);
         qr.crearImagen();
         /*String prueba = "a";
         for (int i = 1; i <= 2953; i++) {
