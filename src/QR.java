@@ -248,8 +248,12 @@ public class QR {
             i = (i+1) % 2;
         }
         System.out.println("La cadena de bits ahora tiene: " + bits.length() + " bits.");
+        /*QR v1 H*/
+        System.out.println("Sólo tenemos un bloque de data cw y es:\n" + bits);
+        System.out.println("Con longitud:\n" + bits.length());
+        /* Fin */
         /* Esta parte considera trabajar con un QR v3 Q. Necesitaremos 2 bloques de datawords*/
-        data_blocks = new String[2];
+        /*data_blocks = new String[2];
         data_blocks[0] = bits.substring(0, 136);
         System.out.println("El primer bloque es: " + data_blocks[0] + " y es de longitud: " + data_blocks[0].length());
         System.out.println("Este bloque contiene: " +  data_blocks[0].length()/8 + " codewords.");
@@ -263,7 +267,7 @@ public class QR {
         System.out.println("Las codewords son: ");
         for (int j = 0; j < data_blocks[1].length(); j+=8) {
             System.out.println(data_blocks[1].substring(j, j+8) + " = " + Integer.parseInt(data_blocks[1].substring(j, j+8),2));
-        }
+        }*/
         /* Fin */
         construyeQR();
     }
@@ -414,8 +418,41 @@ public class QR {
         /*ReedSolomonEC rs = new ReedSolomonEC(bits, nivel, VERSION, ERR_BLOCKS);
         Polinomio resultado = rs.getResultado();
         System.out.println(resultado);*/
+        /* v1 - H */
+        ReedSolomonEC rs = new ReedSolomonEC(bits, VERSION, ERR_BLOCKS);
+        Polinomio resultado = rs.getResultado();
+        int[] ec_cw_block = new int[resultado.getLista().size()];
+        for (int i = 0; i < ec_cw_block.length; i++) {
+            int index = resultado.getLista().get(i).toString().indexOf("x");
+            ec_cw_block[i] = Integer.parseInt(resultado.getLista().get(i).toString().substring(0, index));
+        }
+        int[] data_cw_block = dataCodewords(bits);
+        int[] final_data = new int[ec_cw_block.length + data_cw_block.length];
+        for (int i = 0; i < final_data.length; i++) {
+            if (i < data_cw_block.length) {
+                final_data[i] = data_cw_block[i];
+            } else {
+                final_data[i] = ec_cw_block[i-data_cw_block.length];
+            }
+        }
+
+        String[] final_data_bin = new String[final_data.length];
+
+        for (int i = 0; i < final_data.length; i++) {
+            final_data_bin[i] = String.format("%" + 8 + "s", Integer.toBinaryString(final_data[i])).replace(' ', '0');
+        }
+
+        String final_bits = "";
+
+        for (String s : final_data_bin) {
+            final_bits += s;
+        }
+
+        /*final_bits += "0000000";*/
+        bits_insertar = final_bits;
+        /* Fin */
         /* v3 - Q */
-        ReedSolomonEC rs1 = new ReedSolomonEC(data_blocks[0], VERSION, ERR_BLOCKS);
+        /*ReedSolomonEC rs1 = new ReedSolomonEC(data_blocks[0], VERSION, ERR_BLOCKS);
         ReedSolomonEC rs2 = new ReedSolomonEC(data_blocks[1], VERSION, ERR_BLOCKS);
         Polinomio resultado1 = rs1.getResultado();
         Polinomio resultado2 = rs2.getResultado();
@@ -440,10 +477,10 @@ public class QR {
         System.out.println("El segundo bloque de data codewords tiene: " + data_cw_block_2.length + " codewords.");
         System.out.println("El primer bloque de ec codewords tiene: " + ec_cw_block_1.length + " codewords.");
         System.out.println("El segundo bloque de ec codewords tiene: " + ec_cw_block_2.length + " codewords.");
-        /*int[] data_cw_block_2 = new int[18];
+        *//*int[] data_cw_block_2 = new int[18];
         for (int i = 0; i < 18; i++) {
             data_cw_block_2[i] = i;
-        }*/
+        }*//*
         int[] interleaved_data = new int[data_cw_block_1.length + data_cw_block_2.length];
         for (int i = 0; i < interleaved_data.length; i++) {
             if (i % 2 == 0) {
@@ -452,7 +489,7 @@ public class QR {
                 interleaved_data[i] = data_cw_block_2[i/2];
             }
         }
-        /*System.out.print("[");
+        *//*System.out.print("[");
         for (int x : data_cw_block_1) {
             System.out.print(x + ", ");
         }
@@ -466,7 +503,7 @@ public class QR {
         for (int x : interleaved_data) {
             System.out.print(x + ", ");
         }
-        System.out.println("]");*/
+        System.out.println("]");*//*
 
         int[] interleaved_ECw = new int[ec_cw_block_1.length + ec_cw_block_2.length];
         //System.out.println(interleaved_ECw.length);
@@ -477,7 +514,7 @@ public class QR {
                 interleaved_ECw[i] = ec_cw_block_2[i/2];
             }
         }
-        /*System.out.print("[");
+        *//*System.out.print("[");
         for (int x : ec_cw_block_1) {
             System.out.print(x + ", ");
         }
@@ -491,7 +528,7 @@ public class QR {
         for (int x : interleaved_ECw) {
             System.out.print(x + ", ");
         }
-        System.out.println("]");*/
+        System.out.println("]");*//*
 
         int interleaved_cw_list_length = interleaved_data.length + interleaved_ECw.length;
         System.out.println("Tenemos " + interleaved_cw_list_length + " codewords en total.");
@@ -503,11 +540,11 @@ public class QR {
                 interleaved_cw[i] = interleaved_ECw[i-interleaved_data.length];
             }
         }
-        /*System.out.print("[");
+        *//*System.out.print("[");
         for (int x : interleaved_cw) {
             System.out.print(x + ", ");
         }
-        System.out.println("]");*/
+        System.out.println("]");*//*
 
         String[] interleaved_cw_bin = new String[interleaved_cw.length];
 
@@ -515,11 +552,11 @@ public class QR {
             interleaved_cw_bin[i] = String.format("%" + 8 + "s", Integer.toBinaryString(interleaved_cw[i])).replace(' ', '0');
         }
 
-        /*System.out.print("[");
+        *//*System.out.print("[");
         for (String x : interleaved_cw_bin) {
             System.out.print(x + ", ");
         }
-        System.out.println("]");*/
+        System.out.println("]");*//*
 
         String final_bits = "";
 
@@ -527,8 +564,8 @@ public class QR {
             final_bits += s;
         }
 
-        final_bits += "0000000";
-        bits_insertar = final_bits;
+        *//*final_bits += "0000000";*//*
+        bits_insertar = final_bits;*/
         System.out.println("Se insertarán " + bits_insertar.length() + "bits.");
         insertar_datos();
     }
@@ -540,6 +577,7 @@ public class QR {
         indice = 0;
         columna = TAMANHO - 1;
         fila = TAMANHO - 1;
+        //System.out.println("Último byte: " + bits_insertar.substring());
         while (indice < bits_insertar.length()) {
             if (columna == -1) {
                 return;
@@ -553,6 +591,9 @@ public class QR {
 
     private void llenarArriba() {
         while (fila > 0) {
+            if (indice == bits_insertar.length()-1) {
+                return;
+            }
             if (moduloLibre(columna, fila)) {
                 if (bits_insertar.charAt(indice) == '1') {
                     qr[columna][fila] = true;
@@ -576,6 +617,9 @@ public class QR {
 
     private void llenarAbajo() {
         while (fila < TAMANHO) {
+            if (indice == bits_insertar.length()-1) {
+                return;
+            }
             if (moduloLibre(columna, fila)) {
                 if (bits_insertar.charAt(indice) == '1') {
                     qr[columna][fila] = true;
@@ -798,6 +842,9 @@ public class QR {
      */
     private boolean invadePatronAlineacion(int col, int fil) {
         boolean invade = false;
+        if (VERSION == 1) {
+            return invade;
+        }
         for (int value : COORDENADAS_ALINEACION) {
             for (int i : COORDENADAS_ALINEACION) {
                 if ((value == 6 && value == i) || (value == TAMANHO - 7 && i == 6) || (value == 6 && i == TAMANHO - 7)) {
@@ -1008,27 +1055,9 @@ public class QR {
         binario = cadena_binaria;
     }
 
-    /**
-     * Aplica la máscara a este código QR (boolean[][] qr)
-     * @param m la máscara a aplicar al QR sin modificar las zonas restringidas.
-     */
-    private void mascara(int m) {
-        switch (m) {
-            //Máscara de tipo 1
-            case 1:
-                break;
-            //Máscara de tipo 2
-            case 2:
-                break;
-            default:
-                //No se aplica máscara.
-        }
-
-    }
-
     public void crearImagen() {
         mascara();
-        BufferedImage img = new BufferedImage(29+8, 29+8, BufferedImage.TYPE_INT_RGB);
+        BufferedImage img = new BufferedImage(TAMANHO+8, TAMANHO+8, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = (Graphics2D) img.getGraphics();
         int nuevoColor = 0xFFFFFFFF;
         g2d.setColor(new java.awt.Color(nuevoColor));
@@ -1039,8 +1068,8 @@ public class QR {
         }
         nuevoColor = 0;
         g2d.setColor(new java.awt.Color(nuevoColor));
-        for (int i = 4; i < 29+4; i++) {
-            for (int j = 4; j < 29+4; j++) {
+        for (int i = 4; i < TAMANHO+4; i++) {
+            for (int j = 4; j < TAMANHO+4; j++) {
                 if (qr[i-4][j-4] == true) {
                     g2d.fillRect(i, j, 1, 1);
                 }
@@ -1061,17 +1090,59 @@ public class QR {
 
     private void mascara() {
         int count = 0;
-        for (int i = 0; i < 29; i++) {
-            for (int j = 0; j < 29; j++) {
+        for (int i = 0; i < TAMANHO; i++) {
+            for (int j = 0; j < TAMANHO; j++) {
                 if (moduloLibre(i,j)) {
                     count += 1;
                 }
-                if (moduloLibre(i, j) && i != 6 && (i+j)%2 == 0) {
-                    qr[i][j] = ! qr[i][j];
+                if (moduloLibre(i, j) && i != 6) {
+                    switch (Integer.parseInt(MASCARA,2)) {
+                        case 0:
+                            if ((i+j) % 2 == 0) {
+                                qr[i][j] = ! qr[i][j];
+                            }
+                            break;
+                        case 1:
+                            if (j % 2 == 0) {
+                                qr[i][j] = ! qr[i][j];
+                            }
+                            break;
+                        case 2:
+                            if (i % 2 == 0) {
+                                qr[i][j] = ! qr[i][j];
+                            }
+                            break;
+                        case 3:
+                            if ((i+j) % 3 == 0) {
+                                qr[i][j] = ! qr[i][j];
+                            }
+                            break;
+                        case 4:
+                            if ((j/2) + (i/3) % 2 == 0) {
+                                qr[i][j] = ! qr[i][j];
+                            }
+                            break;
+                        case 5:
+                            if (((i*j) % 2) + ((i*j) % 3) == 0) {
+                                qr[i][j] = ! qr[i][j];
+                            }
+                            break;
+                        case 6:
+                            if ((((i*j) % 2) + ((i*j) % 3)) % 2 == 0) {
+                                qr[i][j] = ! qr[i][j];
+                            }
+                            break;
+                        case 7:
+                            if ((((i+j) % 2) + ((i*j) % 3)) % 2 == 0) {
+                                qr[i][j] = ! qr[i][j];
+                            }
+                            break;
+
+                    }
                 }
             }
         }
-        count -= 13;
+        count -= 5;
         System.out.println("Hay " + count + " modulos de información.");
     }
 
