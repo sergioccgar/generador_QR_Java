@@ -130,11 +130,16 @@ la cadena de bits final que obtuve que contiene toda la información (las data c
 Mañana viernes 9 haré más análisis de esto para ver si puedo corregir esto... Creo que he arrinconado el error... debe estar, sí o sí, en la forma
 en que he agregado los bits al QR... 
 
+Terminé de revisar todo, sin éxito en la búsqueda del error que hace códigos no-escaneables. Sin embargo, logré generalizar el algoritmo
+que usaba para crear los códigos QR versión 1 a 3 con nivel de corrección Q. Agregué bastantes cosas desde la última actualización a este README, por
+lo que muchos cambios no los mencionaré aquí. Igualmente, el trabajo y el tiempo que me tomó hacer esto desembocó en tal vez una documentación
+un tanto pobre del código.
 
-
-
+Generalicé el algoritmo para la creación de QRs de cualquier versión y tamaño.
 
 ### Conclusiones:
+Estoy cansado.
+
 # Preguntas:
 1. Antes de empezar la práctica, ¿cómo crees que funcionaban los códigos QR?
 Ya pensaba que había cuadrados blancos y negros, y que la forma en que se distribuían en el
