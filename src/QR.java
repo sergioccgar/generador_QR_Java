@@ -4,6 +4,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
+import javax.swing.*;
 
 /**
  * Clase que dado una cadena, crea su respectivo código QR para ser escaneado con 
@@ -161,6 +162,208 @@ public class QR {
     /* Bloques de información necesarios según la versión y nivel de corrección */
     private String[] data_blocks;
 
+    /* Bloques de codewords de corrección de errores, es necesario uno por cada bloque de de información */
+    private int[][] ec_cw_blocks;
+
+    /* Bloques de codewords de información del grupo 1 */
+    private int[][] data_cw_blocks_group1;
+
+    /* Bloques de codewords de información del grupo 2 */
+    private int[][] data_cw_blocks_group2;
+
+    /* Codewords de información intercaladas */
+    private int[] interleaved_data;
+
+    /* Codewords de corrección de errores intercaladas */
+    private int[] interleaved_ec;
+
+    /* Codewords de información intercaladas seguidas de codewords de corrección de errores intercaladas */
+    private int[] data_ec_codewords;
+
+    /* Arreglo de bytes a insertar en el QR */
+    String[] binary_to_insert;
+
+    /* Cada versión requiere que la cadena de bits se divida en grupos y bloques de codewords para el nivel de recuperación L*/
+    /* Esto sigue las especificaciones de la página de Thonky https://www.thonky.com/qr-code-tutorial/error-correction-table */
+    private int[][] GRUPOS_Y_BLOQUES_L = {
+            {1, 19, 0, 0},
+            {1, 34, 0, 0},
+            {1, 55, 0, 0},
+            {1, 80, 0, 0},
+            {1, 108, 0, 0},
+            {2, 68, 0, 0},
+            {2, 78, 0, 0},
+            {2, 97, 0, 0},
+            {2, 116, 0, 0},
+            {2, 68, 2, 69},
+            {4, 81, 0, 0},
+            {2, 92, 2, 93},
+            {4, 107, 0, 0},
+            {3, 115, 1, 116},
+            {5, 87, 1, 88},
+            {5, 98, 1, 99},
+            {1, 107, 5, 108},
+            {5, 120, 1, 121},
+            {3, 113, 4, 114},
+            {3, 107, 5, 108},
+            {4, 116, 4, 117},
+            {2, 111, 7, 112},
+            {4, 121, 5, 122},
+            {6, 117, 4, 118},
+            {8, 106, 4, 107},
+            {10, 114, 2, 115},
+            {8, 122, 4, 123},
+            {3, 117, 10, 118},
+            {7, 116, 7, 117},
+            {5, 115, 10, 116},
+            {13, 115, 3, 116},
+            {17, 115, 0, 0},
+            {17, 115, 1, 116},
+            {13, 115, 6, 116},
+            {12, 121, 7, 122},
+            {6, 121, 14, 122},
+            {17, 122, 4, 123},
+            {4, 122, 18, 123},
+            {20, 117, 4, 118},
+            {19, 118, 6, 119},
+    };
+
+    /* Cada versión requiere que la cadena de bits se divida en grupos y bloques de codewords para el nivel de recuperación M */
+    /* Esto sigue las especificaciones de la página de Thonky https://www.thonky.com/qr-code-tutorial/error-correction-table */
+    private int[][] GRUPOS_Y_BLOQUES_M = {
+            {1, 16, 0, 0},
+            {1, 28, 0, 0},
+            {1, 44, 0, 0},
+            {2, 32, 0, 0},
+            {2, 43, 0, 0},
+            {4, 27, 0, 0},
+            {4, 31, 0, 0},
+            {2, 38, 2, 39},
+            {3, 36, 2, 37},
+            {4, 43, 1, 44},
+            {1, 50, 4, 51},
+            {6, 36, 2, 37},
+            {8, 37, 1, 38},
+            {4, 40, 5, 41},
+            {5, 41, 5, 42},
+            {7, 45, 3, 46},
+            {10, 46, 1, 47},
+            {9, 43, 4, 44},
+            {3, 44, 11, 45},
+            {3, 41, 13, 42},
+            {17, 42, 0, 0},
+            {17, 46, 0, 0},
+            {4, 47, 14, 48},
+            {6, 45, 14, 46},
+            {8, 47, 13, 48},
+            {19, 46, 4, 47},
+            {22, 45, 3, 46},
+            {3, 45, 23, 46},
+            {21, 45, 7, 46},
+            {19, 47, 10, 48},
+            {2, 46, 29, 47},
+            {10, 46, 23, 47},
+            {14, 46, 21, 47},
+            {14, 46, 23, 47},
+            {12, 47, 26, 48},
+            {6, 47, 34, 48},
+            {29, 46, 14, 47},
+            {13, 46, 32, 47},
+            {40, 47, 7, 48},
+            {18, 47, 31, 48},
+    } ;
+
+    /* Cada versión requiere que la cadena de bits se divida en grupos y bloques de codewords para el nivel de recuperación Q */
+    /* Esto sigue las especificaciones de la página de Thonky https://www.thonky.com/qr-code-tutorial/error-correction-table */
+    private int[][] GRUPOS_Y_BLOQUES_Q = {
+            {1, 13, 0, 0},
+            {1, 22, 0, 0},
+            {2, 17, 0, 0},
+            {2, 24, 0, 0},
+            {2, 15, 2, 16},
+            {4, 19, 0, 0},
+            {2, 14, 4, 15},
+            {4, 18, 2, 19},
+            {4, 16, 4, 17},
+            {6, 19, 2, 20},
+            {4, 22, 4, 23},
+            {4, 20, 6, 21},
+            {8, 20, 4, 21},
+            {11, 16, 5, 17},
+            {5, 24, 7, 25},
+            {15, 19, 2, 20},
+            {1, 22, 15, 23},
+            {17, 22, 1, 23},
+            {17, 21, 4, 22},
+            {15, 24, 5, 25},
+            {17, 22, 6, 23},
+            {7, 24, 16, 25},
+            {11, 24, 14, 25},
+            {11, 24, 16, 25},
+            {7, 24, 22, 25},
+            {28, 22, 6, 23},
+            {8, 23, 26, 24},
+            {4, 24, 31, 25},
+            {1, 23, 37, 24},
+            {15, 24, 25, 25},
+            {42, 24, 1, 25},
+            {10, 24, 35, 25},
+            {29, 24, 19, 25},
+            {44, 24, 7, 25},
+            {39, 24, 14, 25},
+            {46, 24, 10, 25},
+            {49, 24, 10, 25},
+            {48, 24, 14, 25},
+            {43, 24, 22, 25},
+            {34, 24, 34, 25},
+    };
+
+    /* Cada versión requiere que la cadena de bits se divida en grupos y bloques de codewords para el nivel de recuperación H */
+    /* Esto sigue las especificaciones de la página de Thonky https://www.thonky.com/qr-code-tutorial/error-correction-table */
+    private int[][] GRUPOS_Y_BLOQUES_H = {
+            {1, 9, 0, 0},
+            {1, 16, 0, 0},
+            {2, 13, 0, 0},
+            {4, 9, 0, 0},
+            {2, 11, 2, 12},
+            {4, 15, 0, 0},
+            {4, 13, 1, 14},
+            {4, 14, 2, 15},
+            {4, 12, 4, 13},
+            {6, 15, 2, 16},
+            {3, 12, 8, 13},
+            {7, 14, 4, 15},
+            {12, 11, 4, 12},
+            {11, 12, 5, 13},
+            {11, 12, 7, 13},
+            {3, 15, 13, 16},
+            {2, 14, 17, 15},
+            {2, 14, 19, 15},
+            {9, 13, 16, 14},
+            {15, 15, 10, 16},
+            {19, 16, 6, 17},
+            {34, 13, 0, 0},
+            {16, 15, 14, 16},
+            {30, 16, 2, 17},
+            {22, 15, 13, 16},
+            {33, 16, 4, 17},
+            {12, 15, 28, 16},
+            {11, 15, 31, 16},
+            {19, 15, 26, 16},
+            {23, 15, 25, 16},
+            {23, 15, 28, 16},
+            {19, 15, 35, 16},
+            {11, 15, 46, 16},
+            {59, 16, 1, 17},
+            {22, 15, 41, 16},
+            {2, 15, 64, 16},
+            {24, 15, 46, 16},
+            {42, 15, 32, 16},
+            {10, 15, 67, 16},
+            {20, 15, 61, 16},
+    };
+
+
     public QR(String texto, int recuperacion, int mascara){
         this.texto = texto;
         binario = "";
@@ -207,6 +410,7 @@ public class QR {
                 buscarNumero(texto.length(), BM_Max_H);
                 break;
         }
+        System.out.println("Version: " + VERSION);
         TAMANHO = 21 + (VERSION-1) * 4;
         qr = new boolean[TAMANHO][TAMANHO];
 
@@ -247,10 +451,10 @@ public class QR {
             bits += pad_bits[i];
             i = (i+1) % 2;
         }
-        System.out.println("La cadena de bits ahora tiene: " + bits.length() + " bits.");
-        /*QR v1 H*/
+        /*System.out.println("La cadena de bits ahora tiene: " + bits.length() + " bits.");
+        *//*QR v1 H*//*
         System.out.println("Sólo tenemos un bloque de data cw y es:\n" + bits);
-        System.out.println("Con longitud:\n" + bits.length());
+        System.out.println("Con longitud:\n" + bits.length());*/
         /* Fin */
         /* Esta parte considera trabajar con un QR v3 Q. Necesitaremos 2 bloques de datawords*/
         /*data_blocks = new String[2];
@@ -273,77 +477,284 @@ public class QR {
     }
 
     /**
-     *
+     * Cada versión de QR requiere que la cadena de bits del mensaje se divida en grupos y estos grupos en bloques.
+     * Este método calcula los bloques se deben obtener de la cadena de bits según la versión y el nivel de corrección.
      */
-    /*public boolean prueba(){
-        switch (recuprueba) {
-            case 1: //L
-                return (texto.length() <= BM_Max_L[VERSION-1]);
-            case 0: //M
-                return (texto.length() <= BM_Max_M[VERSION-1]);
-            case 3: //Q
-                return (texto.length() <= BM_Max_Q[VERSION-1]);
-            case 2: //H
-                return (texto.length() <= BM_Max_H[VERSION-1]);
+    private void obtenerDataBlocks() {
+        int[][] data; // Esta variable almacenará cuántos bloques de datos debe tener el QR que se está generando.
+        switch (RECUPERACION_DEC) {
+            case 1:
+                data = GRUPOS_Y_BLOQUES_L;
+                break;
+            case 2:
+                data = GRUPOS_Y_BLOQUES_M;
+                break;
+            case 3:
+                data = GRUPOS_Y_BLOQUES_Q;
+                break;
+            case 4:
+                data = GRUPOS_Y_BLOQUES_H;
+                break;
             default:
-                System.out.println("???");
-                return false;
+                data = new int[1][1];
+                break;
         }
-    }*/
-
-
-    /**
-     * Método que dado un número x (longitud del mensaje), busca en la lista de caracteres máximos para un nivel de corrección
-     * el número más pequeño de la lista que sea mayor a x, la versión de código QR por utilizar será V = i+1, donde i es el índice
-     * del elemento encontrado.
-     * @param value
-     */
-    private void buscarNumero(int value, int[] a) {
-        if(value < a[0]) {
-            VERSION = 1;
-            return;
-        }
-        if(value > a[a.length-1]) {
-            VERSION = 40;
-            return;
-        }
-
-        int lo = 0;
-        int hi = a.length - 1;
-
-        while (lo <= hi) {
-            int mid = (hi + lo) / 2;
-
-            if (value < a[mid]) {
-                hi = mid - 1;
-            } else if (value > a[mid]) {
-                lo = mid + 1;
-            } else {
-                VERSION = mid + 1;
-                return;
+        /*for (int[] x : data) {
+            for (int y : x) {
+                System.out.println(y);
             }
+        }*/
+
+        int num_bloques = data[VERSION-1][0] + data[VERSION-1][2];
+
+        data_blocks = new String[num_bloques];
+        int current_block = 0;
+        int cut = 0;
+        for (int i = 0; i < data[VERSION-1][0]; i++) {
+            data_blocks[current_block] = bits.substring(cut, cut + (data[VERSION-1][1]*8));
+            current_block += 1;
+            cut = cut + (data[VERSION-1][1]*8);
         }
-        // lo == hi + 1
-        VERSION = lo + 1;
-        //System.out.println(VERSION);
+        for (int i = 0; i < data[VERSION-1][2]; i++) {
+            data_blocks[current_block] = bits.substring(cut, cut + (data[VERSION-1][3]*8));
+            current_block += 1;
+            cut = cut + (data[VERSION-1][1]*8);
+        }
     }
 
-    /** Genera una representación en cadena del código QR.
-     * @return una representación en cadena del código QR.
+    /**
+     * Teniendo los bloques de datos podemos generar las codewords de la corrección de errores
+     * con el algoritmo Reed Solomon.
      */
-    @Override
-    public String toString(){
-        String s = "";
-        for (int i = 0; i < qr.length; i++){
-            for (int j = 0; j < qr.length; j++){
-                if (qr[j][i])
-                    s += "██";
-                else
-                    s += "  ";
+    private void generarCodewordsCorreccionErrores() {
+        ec_cw_blocks = new int[data_blocks.length][ERR_BLOCKS];
+        for (int i = 0; i < data_blocks.length; i++) {
+            ReedSolomonEC rs = new ReedSolomonEC(data_blocks[i], VERSION, ERR_BLOCKS);
+            Polinomio r = rs.getResultado();
+            int[] ec_cw_block = new int[r.getLista().size()];
+
+            for (int j = 0; j < ec_cw_block.length; j++) {
+                String temp = r.getLista().get(j).toString();
+                int index = temp.indexOf('x');
+                ec_cw_block[j] = Integer.parseInt(temp.substring(0, index));
             }
-            s += "\n";
+            for (int k = 0; k < ec_cw_block.length; k++) {
+                ec_cw_blocks[i][k] = ec_cw_block[k];
+            }
         }
-        return s;
+        int howmany = 0;
+        for (int[] x : ec_cw_blocks) {
+            for (int y : x) {
+                System.out.print(":" + y + ":");
+                howmany += 1;
+            }
+            System.out.println();
+        }
+        System.out.println("WE HAVE: " + howmany);
+    }
+
+    /**
+     * Dados los bloques de datos (que almacenan cadenas de bits), convertimos cada cadena de bits de cada
+     * bloque de datos en su valor entero. Cada valor entero corresponde a una codeword de la información.
+     */
+    private void generarCodewordsData() {
+        int[][] data; // Esta variable almacenará cuántos bloques de datos debe tener el QR que se está generando.
+        switch (RECUPERACION_DEC) {
+            case 1:
+                data = GRUPOS_Y_BLOQUES_L;
+                break;
+            case 2:
+                data = GRUPOS_Y_BLOQUES_M;
+                break;
+            case 3:
+                data = GRUPOS_Y_BLOQUES_Q;
+                break;
+            case 4:
+                data = GRUPOS_Y_BLOQUES_H;
+                break;
+            default:
+                data = new int[1][1];
+                break;
+        }
+        /*data_cw_blocks_group1 = new int[data[VERSION-1][1]][data[VERSION-1][0]];
+        data_cw_blocks_group2 = new int[data[VERSION-1][3]][data[VERSION-1][2]];*/
+        data_cw_blocks_group1 = new int[data[VERSION-1][0]][data[VERSION-1][1]];
+        data_cw_blocks_group2 = new int[data[VERSION-1][2]][data[VERSION-1][3]];
+        System.out.println("El grupo 1 tiene " +  data_cw_blocks_group1.length + " codewords por bloque y " + data_cw_blocks_group1[0].length + " bloques");
+        System.out.println("El grupo 2 tiene " +  data_cw_blocks_group2.length + " codewords por bloque y " + data_cw_blocks_group1[0].length + " bloques");
+        for (String s: data_blocks) {
+            System.out.println(s);
+        }
+        int current_block = 0;
+        System.out.println("Este loop itera: " + data[VERSION-1][0] + " veces.");
+        for (int i = 0; i < data[VERSION-1][0]; i++) {
+            int[] dataCodewords = dataCodewords(data_blocks[current_block]);
+            for (int x : dataCodewords) {
+                System.out.println(x);
+            }
+            for (int j = 0; j < dataCodewords.length; j++) {
+                data_cw_blocks_group1[current_block][j] = dataCodewords[j];
+            }
+            current_block += 1;
+        }
+        for (int[] x : data_cw_blocks_group1) {
+            for (int y : x) {
+                System.out.print(y + " - ");
+            }
+            System.out.println();
+        }
+        //current_block = 0; // corregí esto, hmmm
+        int done_blocks = current_block;
+        for (int i = 0; i < data[VERSION-1][2]; i++) {
+            int[] dataCodewords = dataCodewords(data_blocks[current_block]);
+            for (int j = 0; j < dataCodewords.length; j++) {
+                data_cw_blocks_group2[current_block-done_blocks][j] = dataCodewords[j];
+            }
+            current_block += 1;
+        }
+        System.out.println("-------------------------");
+        for (int[] x : data_cw_blocks_group2) {
+            for (int y : x) {
+                System.out.print(y + " - ");
+            }
+            System.out.println();
+        }
+    }
+
+    /**
+     * Método que intercala las codewords de información y de corrección de errores.
+     */
+    private void interleaveCodewords() {
+        int[][] data; // Esta variable almacenará cuántos bloques de datos debe tener el QR que se está generando.
+        switch (RECUPERACION_DEC) {
+            case 1:
+                data = GRUPOS_Y_BLOQUES_L;
+                break;
+            case 2:
+                data = GRUPOS_Y_BLOQUES_M;
+                break;
+            case 3:
+                data = GRUPOS_Y_BLOQUES_Q;
+                break;
+            case 4:
+                data = GRUPOS_Y_BLOQUES_H;
+                break;
+            default:
+                data = new int[1][1];
+                break;
+        }
+        interleaved_data = new int[(data[VERSION-1][0] * data[VERSION-1][1]) + (data[VERSION-1][2] * data[VERSION-1][3])];
+        System.out.println("We'll have: " + interleaved_data.length + " codewords.");
+        int current = 0;
+        // Intercalamos las codewords de información, tomando la primera del primer bloque, luego la primera del segundo
+        // bloque, la primera del tercer bloque, y así sucesivamente; después tomamos la segunda del primer bloque, la segunda
+        // del segundo, etc. Por ahora cubriremos solo hasta la n-ésima codeword donde n es igual al número de codewords
+        // en los bloques del grupo 1, pues los bloques del grupo 2 tienen, cada uno, una codeword más. Estas (n+1)-ésimas
+        // codewords, del segundo grupo, se agregarán en un ciclo posterior.
+
+        for (int i = 0; i < data[VERSION-1][1]; i++) {
+            for (int j = 0; j < data[VERSION-1][0] + data[VERSION-1][2]; j++) {
+                if (j < data[VERSION-1][0]) {
+                    System.out.print(":" + data_cw_blocks_group1[j][i] + ":");
+                    interleaved_data[current] = data_cw_blocks_group1[j][i];
+                    current += 1;
+                } else {
+                    //System.out.print(":" + data_cw_blocks_group2[j-2][i] + ":");
+                    /*System.out.println("\n" + (j-(data[VERSION-1][0])));
+                    System.out.println(data[VERSION-1][0]);*/
+                    interleaved_data[current] = data_cw_blocks_group2[j-(data[VERSION-1][0])][i];
+                    current += 1;
+                    if (current % 4 == 0) { System.out.println(); }
+                }
+            }
+        }
+        // Este ciclo agrega las codewords faltantes de los bloques del grupo 2.
+        try {
+            System.out.println(data_cw_blocks_group2[0][data[VERSION-1][3]-1]);
+            System.out.println(data_cw_blocks_group2[1][data[VERSION-1][3]-1]);
+        } catch (ArrayIndexOutOfBoundsException e) {
+
+        }
+        if (data[VERSION-1][2] > 0) {
+            for (int i = 0; i < data[VERSION-1][2]; i++) {
+                interleaved_data[current] = data_cw_blocks_group2[i][data[VERSION-1][3]-1];
+                current += 1;
+            }
+        }
+        System.out.println("Las codewords de la información intercaladas son: ");
+        for (int x : interleaved_data) {
+            System.out.println(x);
+        }
+        // ¡Ya tenemos las codewords intercaladas!
+        // Ahora intercalamos las codewords de los bloques de corrección de errores
+        current = 0;
+        interleaved_ec = new int[ec_cw_blocks.length * ec_cw_blocks[0].length];
+        System.out.println("Tendremos: " + interleaved_ec.length);
+        /*System.out.println("Las codewords de corrección de errores son: ");
+        for (int[] x : ec_cw_blocks) {
+            for (int y : x) {
+                System.out.println(y);
+            }
+        }*/
+
+        /*:230::165::25::231::114::62::15::114::146::93::98::37::232::83::105::168::3::109:
+          :83::125::225::184::140::242::10::137::134::95::245::224::91::158::135::140::194::199:
+          :241::95::226::174::117::156::185::232::216::253::200::65::170::19::25::88::99::109:
+          :45::236::52::101::7::8::232::29::179::93::5::4::82::215::2::251::102::95:*/
+        for (int i = 0; i < ERR_BLOCKS; i++) {
+            for (int j = 0; j < (ec_cw_blocks.length * ec_cw_blocks[0].length)/ERR_BLOCKS; j++) {
+                interleaved_ec[current] = ec_cw_blocks[j][i];
+                current += 1;
+            }
+        }
+        System.out.println("Las codewords de los bloques de corrección intercaladas son: ");
+        for (int x : interleaved_ec) {
+            System.out.print(":" + x + ":");
+        }
+        System.out.println();
+    }
+
+    /**
+     * Método que concatena las codewords
+     */
+    private void concatenarCW() {
+        data_ec_codewords = new int[interleaved_data.length + interleaved_ec.length];
+        for (int i = 0; i < interleaved_data.length; i++) {
+            data_ec_codewords[i] = interleaved_data[i];
+        }
+        for (int i = 0; i < interleaved_ec.length; i++) {
+            data_ec_codewords[i + interleaved_data.length] = interleaved_ec[i];
+        }
+        System.out.println("Las codewords son: ");
+        for (int x : data_ec_codewords) {
+            System.out.print(":" + x + ":");
+        }
+        System.out.println();
+    }
+
+    /**
+     * Método que convierte las codewords a cadenas de bits, estas serán las que se insertarán en el código QR.
+     */
+    private void codewordsABinario() {
+        binary_to_insert = new String[data_ec_codewords.length];
+        for (int i = 0; i < data_ec_codewords.length; i++) {
+            binary_to_insert[i] = String.format("%" + 8 + "s", Integer.toBinaryString(data_ec_codewords[i])).replace(' ', '0');
+        }
+        System.out.println("Las codewords a binario son: ");
+        for (String s: binary_to_insert) {
+            System.out.print(":" + s + ":");
+        }
+    }
+
+    /**
+     * Método que dado un arreglo de cadenas binarias, las concatena para generar la cadena de bits que se insertarán en el código QR
+     */
+    private void cadenaFinal() {
+        bits_insertar = "";
+        for (String s : binary_to_insert) {
+            bits_insertar += s;
+        }
+        System.out.println("Longitud cadena obtenida: " + bits_insertar.length());
     }
 
     /**
@@ -397,21 +808,6 @@ public class QR {
         if (VERSION >= 7) {
             versInf();
         }
-        /*String nivel = "";
-        switch (RECUPERACION_DEC) {
-            case 1:
-                nivel = "L";
-                break;
-            case 0:
-                nivel = "M";
-                break;
-            case 3:
-                nivel = "Q";
-                break;
-            case 2:
-                nivel = "H";
-                break;
-        }*/
         ERR_BLOCKS = ERR_BLOCKS_LIST[((VERSION-1)*4)+(RECUPERACION_DEC+(int)Math.pow(-1, RECUPERACION_DEC+2))];
         System.out.println("Necesitamos " + ERR_BLOCKS + " bloques de corrección de errores por cada bloque de data codewords.");
         //System.out.println(bits);
@@ -419,7 +815,7 @@ public class QR {
         Polinomio resultado = rs.getResultado();
         System.out.println(resultado);*/
         /* v1 - H */
-        ReedSolomonEC rs = new ReedSolomonEC(bits, VERSION, ERR_BLOCKS);
+        /*ReedSolomonEC rs = new ReedSolomonEC(bits, VERSION, ERR_BLOCKS);
         Polinomio resultado = rs.getResultado();
         int[] ec_cw_block = new int[resultado.getLista().size()];
         for (int i = 0; i < ec_cw_block.length; i++) {
@@ -446,11 +842,12 @@ public class QR {
 
         for (String s : final_data_bin) {
             final_bits += s;
-        }
+        }*/
 
         /*final_bits += "0000000";*/
-        bits_insertar = final_bits;
+        //bits_insertar = final_bits;
         /* Fin */
+
         /* v3 - Q */
         /*ReedSolomonEC rs1 = new ReedSolomonEC(data_blocks[0], VERSION, ERR_BLOCKS);
         ReedSolomonEC rs2 = new ReedSolomonEC(data_blocks[1], VERSION, ERR_BLOCKS);
@@ -477,8 +874,8 @@ public class QR {
         System.out.println("El segundo bloque de data codewords tiene: " + data_cw_block_2.length + " codewords.");
         System.out.println("El primer bloque de ec codewords tiene: " + ec_cw_block_1.length + " codewords.");
         System.out.println("El segundo bloque de ec codewords tiene: " + ec_cw_block_2.length + " codewords.");
-        *//*int[] data_cw_block_2 = new int[18];
-        for (int i = 0; i < 18; i++) {
+        //int[] data_cw_block_2 = new int[18];
+        *//*for (int i = 0; i < 18; i++) {
             data_cw_block_2[i] = i;
         }*//*
         int[] interleaved_data = new int[data_cw_block_1.length + data_cw_block_2.length];
@@ -489,7 +886,7 @@ public class QR {
                 interleaved_data[i] = data_cw_block_2[i/2];
             }
         }
-        *//*System.out.print("[");
+        System.out.print("[");
         for (int x : data_cw_block_1) {
             System.out.print(x + ", ");
         }
@@ -503,7 +900,7 @@ public class QR {
         for (int x : interleaved_data) {
             System.out.print(x + ", ");
         }
-        System.out.println("]");*//*
+        System.out.println("]");
 
         int[] interleaved_ECw = new int[ec_cw_block_1.length + ec_cw_block_2.length];
         //System.out.println(interleaved_ECw.length);
@@ -514,7 +911,7 @@ public class QR {
                 interleaved_ECw[i] = ec_cw_block_2[i/2];
             }
         }
-        *//*System.out.print("[");
+        System.out.print("[");
         for (int x : ec_cw_block_1) {
             System.out.print(x + ", ");
         }
@@ -528,7 +925,7 @@ public class QR {
         for (int x : interleaved_ECw) {
             System.out.print(x + ", ");
         }
-        System.out.println("]");*//*
+        System.out.println("]");
 
         int interleaved_cw_list_length = interleaved_data.length + interleaved_ECw.length;
         System.out.println("Tenemos " + interleaved_cw_list_length + " codewords en total.");
@@ -540,11 +937,11 @@ public class QR {
                 interleaved_cw[i] = interleaved_ECw[i-interleaved_data.length];
             }
         }
-        *//*System.out.print("[");
+        System.out.print("[");
         for (int x : interleaved_cw) {
             System.out.print(x + ", ");
         }
-        System.out.println("]");*//*
+        System.out.println("]");
 
         String[] interleaved_cw_bin = new String[interleaved_cw.length];
 
@@ -564,9 +961,17 @@ public class QR {
             final_bits += s;
         }
 
-        *//*final_bits += "0000000";*//*
-        bits_insertar = final_bits;*/
-        System.out.println("Se insertarán " + bits_insertar.length() + "bits.");
+        //final_bits += "0000000";
+        bits_insertar = final_bits;
+        System.out.println("Se insertarán " + bits_insertar.length() + "bits.");*/
+        obtenerDataBlocks();
+        generarCodewordsCorreccionErrores();
+        generarCodewordsData();
+        interleaveCodewords();
+        concatenarCW();
+        codewordsABinario();
+        cadenaFinal();
+        System.out.println("Se insertará: " + bits_insertar);
         insertar_datos();
     }
 
@@ -1061,8 +1466,8 @@ public class QR {
         Graphics2D g2d = (Graphics2D) img.getGraphics();
         int nuevoColor = 0xFFFFFFFF;
         g2d.setColor(new java.awt.Color(nuevoColor));
-        for (int i = 0; i < 29+8; i++) {
-            for (int j = 0; j < 29+8; j++) {
+        for (int i = 0; i < TAMANHO+8; i++) {
+            for (int j = 0; j < TAMANHO+8; j++) {
                 g2d.fillRect(i, j, 1, 1);
             }
         }
@@ -1078,7 +1483,7 @@ public class QR {
         g2d.dispose();
 
         // Guardar la imagen modificada
-        File archivo = new File("imgsinmasc.png");
+        File archivo = new File("IMG.png");
         try {
             ImageIO.write(img, "png", archivo);
         } catch (IOException e) {
@@ -1144,6 +1549,80 @@ public class QR {
         }
         count -= 5;
         System.out.println("Hay " + count + " modulos de información.");
+    }
+
+    /**
+     *
+     */
+    /*public boolean prueba(){
+        switch (recuprueba) {
+            case 1: //L
+                return (texto.length() <= BM_Max_L[VERSION-1]);
+            case 0: //M
+                return (texto.length() <= BM_Max_M[VERSION-1]);
+            case 3: //Q
+                return (texto.length() <= BM_Max_Q[VERSION-1]);
+            case 2: //H
+                return (texto.length() <= BM_Max_H[VERSION-1]);
+            default:
+                System.out.println("???");
+                return false;
+        }
+    }*/
+
+
+    /**
+     * Método que dado un número x (longitud del mensaje), busca en la lista de caracteres máximos para un nivel de corrección
+     * el número más pequeño de la lista que sea mayor a x, la versión de código QR por utilizar será V = i+1, donde i es el índice
+     * del elemento encontrado.
+     * @param value
+     */
+    private void buscarNumero(int value, int[] a) {
+        if(value < a[0]) {
+            VERSION = 1;
+            return;
+        }
+        if(value > a[a.length-1]) {
+            VERSION = 40;
+            return;
+        }
+
+        int lo = 0;
+        int hi = a.length - 1;
+
+        while (lo <= hi) {
+            int mid = (hi + lo) / 2;
+
+            if (value < a[mid]) {
+                hi = mid - 1;
+            } else if (value > a[mid]) {
+                lo = mid + 1;
+            } else {
+                VERSION = mid + 1;
+                return;
+            }
+        }
+        // lo == hi + 1
+        VERSION = lo + 1;
+        //System.out.println(VERSION);
+    }
+
+    /** Genera una representación en cadena del código QR.
+     * @return una representación en cadena del código QR.
+     */
+    @Override
+    public String toString(){
+        String s = "";
+        for (int i = 0; i < qr.length; i++){
+            for (int j = 0; j < qr.length; j++){
+                if (qr[j][i])
+                    s += "██";
+                else
+                    s += "  ";
+            }
+            s += "\n";
+        }
+        return s;
     }
 
 
