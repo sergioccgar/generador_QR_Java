@@ -370,12 +370,12 @@ public class QR {
         MASCARA = String.format("%" + 3 + "s", Integer.toBinaryString(mascara)).replace(' ', '0');
         RECUPERACION = String.format("%" + 2 + "s", Integer.toBinaryString(recuperacion)).replace(' ', '0');
         RECUPERACION_DEC = recuperacion;
-        System.out.println(RECUPERACION);
+        // System.out.println(RECUPERACION);
         CODIFICACION = String.format("%" + 4 + "s", Integer.toBinaryString(4)).replace(' ', '0'); //cambiar a 4, byte mode
-        System.out.println(CODIFICACION);
+        // System.out.println(CODIFICACION);
         TAMAÑO_MENSAJE = texto.length();
         textoABinario();
-        System.out.println("texto en binario: " + binario);
+        // System.out.println("texto en binario: " + binario);
         switch (recuperacion) {
             case 1: //L
                 if (texto.length() > 2953) { // Si se eligió este nivel de corrección, pero el texto es demasiado grande, ser recortará a la máxima capacidad para dicho nivel de corrección.
@@ -410,7 +410,7 @@ public class QR {
                 buscarNumero(texto.length(), BM_Max_H);
                 break;
         }
-        System.out.println("Version: " + VERSION);
+        //System.out.println("Version: " + VERSION);
         TAMANHO = 21 + (VERSION-1) * 4;
         qr = new boolean[TAMANHO][TAMANHO];
 
@@ -420,30 +420,30 @@ public class QR {
             LONG_MENSAJE = String.format("%" + 8 + "s", Integer.toBinaryString(texto.length())).replace(' ', '0');
         }
 
-        System.out.println("Longitud del mensaje en binario: " + LONG_MENSAJE);
+        // System.out.println("Longitud del mensaje en binario: " + LONG_MENSAJE);
 
         BITS_NECESARIOS = CODEWORDS[((VERSION-1)*4)+(RECUPERACION_DEC+(int)Math.pow(-1, RECUPERACION_DEC+2))]*8;
-        System.out.println("Bits necesarios: " + BITS_NECESARIOS);
-        System.out.println("Codificación (byte mode): " + CODIFICACION);
-        System.out.println("La longitud del mensaje en binario es: " + LONG_MENSAJE);
-        System.out.println("El mensaje en binario es: " + binario);
+        // System.out.println("Bits necesarios: " + BITS_NECESARIOS);
+        // System.out.println("Codificación (byte mode): " + CODIFICACION);
+        // System.out.println("La longitud del mensaje en binario es: " + LONG_MENSAJE);
+        // System.out.println("El mensaje en binario es: " + binario);
         bits = "" + CODIFICACION + LONG_MENSAJE + binario; // Cadena que contiene el nivel de corrección, la longitud del mensaje y el mensaje en binario
-        System.out.println("Por lo que la cadena es:" + bits);
+        // System.out.println("Por lo que la cadena es:" + bits);
         // Se agregan los bits 0 de fin de mensaje.
-        System.out.println("La cantidad de bits que tenemos es: " + bits.length());
+        // System.out.println("La cantidad de bits que tenemos es: " + bits.length());
         if (bits.length() + 4 <= BITS_NECESARIOS) {
             bits += "0000";
-            System.out.println("Se agregaron 4 bits. Ahora la cantidad de bits que tenemos es: " + bits.length());
+            // System.out.println("Se agregaron 4 bits. Ahora la cantidad de bits que tenemos es: " + bits.length());
         } else {
             while (bits.length() < BITS_NECESARIOS) {
                 bits += "0";
             }
         }
         while (bits.length() % 8 != 0) {
-            System.out.println("Se agregaron tantos 0s para que la cadena de bits sea de longitud multiplo de 8.");
+            // System.out.println("Se agregaron tantos 0s para que la cadena de bits sea de longitud multiplo de 8.");
             bits += "0";
         }
-        System.out.println("La cantidad de bits que tenemos es: " + bits.length());
+        // System.out.println("La cantidad de bits que tenemos es: " + bits.length());
         // Ahora, mientras no tengamos una cadena de 272 bits, debemos agregar los pad_bytes
         String[] pad_bits = {"11101100", "00010001"};
         int i = 0;
@@ -486,13 +486,13 @@ public class QR {
             case 1:
                 data = GRUPOS_Y_BLOQUES_L;
                 break;
-            case 2:
+            case 0:
                 data = GRUPOS_Y_BLOQUES_M;
                 break;
             case 3:
                 data = GRUPOS_Y_BLOQUES_Q;
                 break;
-            case 4:
+            case 2:
                 data = GRUPOS_Y_BLOQUES_H;
                 break;
             default:
@@ -505,6 +505,8 @@ public class QR {
             }
         }*/
 
+        // System.out.println("ppppppppppppp" + data[VERSION-1][0]);
+        // System.out.println("qqqqqqqqqqqqq" + data[VERSION-1][2]);
         int num_bloques = data[VERSION-1][0] + data[VERSION-1][2];
 
         data_blocks = new String[num_bloques];
@@ -542,15 +544,15 @@ public class QR {
                 ec_cw_blocks[i][k] = ec_cw_block[k];
             }
         }
-        int howmany = 0;
+        /*int howmany = 0;
         for (int[] x : ec_cw_blocks) {
             for (int y : x) {
-                System.out.print(":" + y + ":");
+                // System.out.print(":" + y + ":");
                 howmany += 1;
             }
             System.out.println();
         }
-        System.out.println("WE HAVE: " + howmany);
+        System.out.println("WE HAVE: " + howmany);*/
     }
 
     /**
@@ -563,13 +565,13 @@ public class QR {
             case 1:
                 data = GRUPOS_Y_BLOQUES_L;
                 break;
-            case 2:
+            case 0:
                 data = GRUPOS_Y_BLOQUES_M;
                 break;
             case 3:
                 data = GRUPOS_Y_BLOQUES_Q;
                 break;
-            case 4:
+            case 2:
                 data = GRUPOS_Y_BLOQUES_H;
                 break;
             default:
@@ -580,29 +582,29 @@ public class QR {
         data_cw_blocks_group2 = new int[data[VERSION-1][3]][data[VERSION-1][2]];*/
         data_cw_blocks_group1 = new int[data[VERSION-1][0]][data[VERSION-1][1]];
         data_cw_blocks_group2 = new int[data[VERSION-1][2]][data[VERSION-1][3]];
-        System.out.println("El grupo 1 tiene " +  data_cw_blocks_group1.length + " codewords por bloque y " + data_cw_blocks_group1[0].length + " bloques");
-        System.out.println("El grupo 2 tiene " +  data_cw_blocks_group2.length + " codewords por bloque y " + data_cw_blocks_group1[0].length + " bloques");
-        for (String s: data_blocks) {
+        // System.out.println("El grupo 1 tiene " +  data_cw_blocks_group1.length + " codewords por bloque y " + data_cw_blocks_group1[0].length + " bloques");
+        // System.out.println("El grupo 2 tiene " +  data_cw_blocks_group2.length + " codewords por bloque y " + data_cw_blocks_group1[0].length + " bloques");
+        /*for (String s: data_blocks) {
             System.out.println(s);
-        }
+        }*/
         int current_block = 0;
-        System.out.println("Este loop itera: " + data[VERSION-1][0] + " veces.");
+        // System.out.println("Este loop itera: " + data[VERSION-1][0] + " veces.");
         for (int i = 0; i < data[VERSION-1][0]; i++) {
             int[] dataCodewords = dataCodewords(data_blocks[current_block]);
-            for (int x : dataCodewords) {
+            /*for (int x : dataCodewords) {
                 System.out.println(x);
-            }
+            }*/
             for (int j = 0; j < dataCodewords.length; j++) {
                 data_cw_blocks_group1[current_block][j] = dataCodewords[j];
             }
             current_block += 1;
         }
-        for (int[] x : data_cw_blocks_group1) {
+        /*for (int[] x : data_cw_blocks_group1) {
             for (int y : x) {
                 System.out.print(y + " - ");
             }
             System.out.println();
-        }
+        }*/
         //current_block = 0; // corregí esto, hmmm
         int done_blocks = current_block;
         for (int i = 0; i < data[VERSION-1][2]; i++) {
@@ -612,13 +614,13 @@ public class QR {
             }
             current_block += 1;
         }
-        System.out.println("-------------------------");
+        /*System.out.println("-------------------------");
         for (int[] x : data_cw_blocks_group2) {
             for (int y : x) {
                 System.out.print(y + " - ");
             }
             System.out.println();
-        }
+        }*/
     }
 
     /**
@@ -630,13 +632,13 @@ public class QR {
             case 1:
                 data = GRUPOS_Y_BLOQUES_L;
                 break;
-            case 2:
+            case 0:
                 data = GRUPOS_Y_BLOQUES_M;
                 break;
             case 3:
                 data = GRUPOS_Y_BLOQUES_Q;
                 break;
-            case 4:
+            case 2:
                 data = GRUPOS_Y_BLOQUES_H;
                 break;
             default:
@@ -644,7 +646,7 @@ public class QR {
                 break;
         }
         interleaved_data = new int[(data[VERSION-1][0] * data[VERSION-1][1]) + (data[VERSION-1][2] * data[VERSION-1][3])];
-        System.out.println("We'll have: " + interleaved_data.length + " codewords.");
+        // System.out.println("We'll have: " + interleaved_data.length + " codewords.");
         int current = 0;
         // Intercalamos las codewords de información, tomando la primera del primer bloque, luego la primera del segundo
         // bloque, la primera del tercer bloque, y así sucesivamente; después tomamos la segunda del primer bloque, la segunda
@@ -655,7 +657,7 @@ public class QR {
         for (int i = 0; i < data[VERSION-1][1]; i++) {
             for (int j = 0; j < data[VERSION-1][0] + data[VERSION-1][2]; j++) {
                 if (j < data[VERSION-1][0]) {
-                    System.out.print(":" + data_cw_blocks_group1[j][i] + ":");
+                    // System.out.print(":" + data_cw_blocks_group1[j][i] + ":");
                     interleaved_data[current] = data_cw_blocks_group1[j][i];
                     current += 1;
                 } else {
@@ -664,14 +666,14 @@ public class QR {
                     System.out.println(data[VERSION-1][0]);*/
                     interleaved_data[current] = data_cw_blocks_group2[j-(data[VERSION-1][0])][i];
                     current += 1;
-                    if (current % 4 == 0) { System.out.println(); }
+                    //if (current % 4 == 0) { System.out.println(); }
                 }
             }
         }
         // Este ciclo agrega las codewords faltantes de los bloques del grupo 2.
         try {
-            System.out.println(data_cw_blocks_group2[0][data[VERSION-1][3]-1]);
-            System.out.println(data_cw_blocks_group2[1][data[VERSION-1][3]-1]);
+            // System.out.println(data_cw_blocks_group2[0][data[VERSION-1][3]-1]);
+            // System.out.println(data_cw_blocks_group2[1][data[VERSION-1][3]-1]);
         } catch (ArrayIndexOutOfBoundsException e) {
 
         }
@@ -681,15 +683,15 @@ public class QR {
                 current += 1;
             }
         }
-        System.out.println("Las codewords de la información intercaladas son: ");
-        for (int x : interleaved_data) {
+        // System.out.println("Las codewords de la información intercaladas son: ");
+        /*for (int x : interleaved_data) {
             System.out.println(x);
-        }
+        }*/
         // ¡Ya tenemos las codewords intercaladas!
         // Ahora intercalamos las codewords de los bloques de corrección de errores
         current = 0;
         interleaved_ec = new int[ec_cw_blocks.length * ec_cw_blocks[0].length];
-        System.out.println("Tendremos: " + interleaved_ec.length);
+        // System.out.println("Tendremos: " + interleaved_ec.length);
         /*System.out.println("Las codewords de corrección de errores son: ");
         for (int[] x : ec_cw_blocks) {
             for (int y : x) {
@@ -707,11 +709,11 @@ public class QR {
                 current += 1;
             }
         }
-        System.out.println("Las codewords de los bloques de corrección intercaladas son: ");
+        /*System.out.println("Las codewords de los bloques de corrección intercaladas son: ");
         for (int x : interleaved_ec) {
             System.out.print(":" + x + ":");
         }
-        System.out.println();
+        System.out.println();*/
     }
 
     /**
@@ -725,11 +727,11 @@ public class QR {
         for (int i = 0; i < interleaved_ec.length; i++) {
             data_ec_codewords[i + interleaved_data.length] = interleaved_ec[i];
         }
-        System.out.println("Las codewords son: ");
+        /*System.out.println("Las codewords son: ");
         for (int x : data_ec_codewords) {
             System.out.print(":" + x + ":");
         }
-        System.out.println();
+        System.out.println();*/
     }
 
     /**
@@ -740,10 +742,10 @@ public class QR {
         for (int i = 0; i < data_ec_codewords.length; i++) {
             binary_to_insert[i] = String.format("%" + 8 + "s", Integer.toBinaryString(data_ec_codewords[i])).replace(' ', '0');
         }
-        System.out.println("Las codewords a binario son: ");
+        /*System.out.println("Las codewords a binario son: ");
         for (String s: binary_to_insert) {
             System.out.print(":" + s + ":");
-        }
+        }*/
     }
 
     /**
@@ -754,7 +756,7 @@ public class QR {
         for (String s : binary_to_insert) {
             bits_insertar += s;
         }
-        System.out.println("Longitud cadena obtenida: " + bits_insertar.length());
+        // System.out.println("Longitud cadena obtenida: " + bits_insertar.length());
     }
 
     /**
@@ -809,7 +811,7 @@ public class QR {
             versInf();
         }
         ERR_BLOCKS = ERR_BLOCKS_LIST[((VERSION-1)*4)+(RECUPERACION_DEC+(int)Math.pow(-1, RECUPERACION_DEC+2))];
-        System.out.println("Necesitamos " + ERR_BLOCKS + " bloques de corrección de errores por cada bloque de data codewords.");
+        // System.out.println("Necesitamos " + ERR_BLOCKS + " bloques de corrección de errores por cada bloque de data codewords.");
         //System.out.println(bits);
         /*ReedSolomonEC rs = new ReedSolomonEC(bits, nivel, VERSION, ERR_BLOCKS);
         Polinomio resultado = rs.getResultado();
@@ -971,7 +973,7 @@ public class QR {
         concatenarCW();
         codewordsABinario();
         cadenaFinal();
-        System.out.println("Se insertará: " + bits_insertar);
+        // System.out.println("Se insertará: " + bits_insertar);
         insertar_datos();
     }
 
@@ -1452,7 +1454,7 @@ public class QR {
      */
     private void textoABinario(){
         char[] chars = texto.toCharArray();
-        System.out.println((int)chars[0]);
+        // System.out.println((int)chars[0]);
         String cadena_binaria = "";
         for (char a : chars) {
             cadena_binaria += String.format("%" + 8 + "s", Integer.toBinaryString((int) a)).replace(' ', '0');
@@ -1460,7 +1462,7 @@ public class QR {
         binario = cadena_binaria;
     }
 
-    public void crearImagen() {
+    public void crearImagen(String s) {
         mascara();
         BufferedImage img = new BufferedImage(TAMANHO+8, TAMANHO+8, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = (Graphics2D) img.getGraphics();
@@ -1483,7 +1485,7 @@ public class QR {
         g2d.dispose();
 
         // Guardar la imagen modificada
-        File archivo = new File("IMG.png");
+        File archivo = new File(s + ".png");
         try {
             ImageIO.write(img, "png", archivo);
         } catch (IOException e) {
@@ -1548,7 +1550,7 @@ public class QR {
             }
         }
         count -= 5;
-        System.out.println("Hay " + count + " modulos de información.");
+        // System.out.println("Hay " + count + " modulos de información.");
     }
 
     /**

@@ -87,9 +87,9 @@ public class ReedSolomonEC {
         this.errBlocks = errBlocks;
         
         this.generatorPoly = Polinomio.generator(errBlocks);
-        System.out.println("Polinomio generador en notación alpha:\n" + generatorPoly);
+        // System.out.println("Polinomio generador en notación alpha:\n" + generatorPoly);
         messagePoly = Polinomio.messagePoly(mensaje);
-        System.out.println("\nPolinomio del mensaje en notacion entera:\n" + messagePoly);
+        // System.out.println("\nPolinomio del mensaje en notacion entera:\n" + messagePoly);
         preludio(); // Prepara los polinomios de mensaje y generador para que el leading term tenga el mismo exponente.
         division();
     }
@@ -154,9 +154,9 @@ public class ReedSolomonEC {
      */
     public void preludio(){
         int i = messagePoly.gradoMaximo();
-        System.out.println("Grado máximo del polinomio de mensaje: " + i);
+        // System.out.println("Grado máximo del polinomio de mensaje: " + i);
         //Multiplicar por x^n
-        System.out.println("Se multiplicará por x^" + errBlocks);
+        // System.out.println("Se multiplicará por x^" + errBlocks);
         Polinomio.Termino n = new Polinomio.Termino(1, errBlocks);
         Polinomio p = new Polinomio();
         p.agregaTermino(n);
@@ -165,16 +165,16 @@ public class ReedSolomonEC {
         System.out.println("Polinomio de mensaje en notación alfa: " + messagePoly);
         *//**/
         messagePoly.multiplicaPolinomio(p);
-        System.out.println("Polinomio de mensaje multiplicado por x^"+errBlocks);
-        System.out.println(messagePoly);
-        System.out.println("Por ahora el polinomio generador es:\n"+generatorPoly);
+        // System.out.println("Polinomio de mensaje multiplicado por x^"+errBlocks);
+        // System.out.println(messagePoly);
+        // System.out.println("Por ahora el polinomio generador es:\n"+generatorPoly);
         //Multiplicar por x^m
         n.setExponente(i);
         p.toAlphaNotation();
-        System.out.println("Ahora el polinomio generador es:\n"+generatorPoly);
+        // System.out.println("Ahora el polinomio generador es:\n"+generatorPoly);
 
         generatorPoly.multiplicaPolinomio(p);
-        System.out.println("Finalmente el polinomio generador es:\n"+generatorPoly);
+        // System.out.println("Finalmente el polinomio generador es:\n"+generatorPoly);
 
     }
     
