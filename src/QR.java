@@ -411,6 +411,9 @@ public class QR {
                 break;
         }
         //System.out.println("Version: " + VERSION);
+        if (texto.equals("ADIOSTEORIADECODIGOS")) {
+            System.out.println("Versión del QR del punto extra 4: " + VERSION);
+        }
         TAMANHO = 21 + (VERSION-1) * 4;
         qr = new boolean[TAMANHO][TAMANHO];
 
